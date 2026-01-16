@@ -36,7 +36,7 @@ sudo apt update && sudo apt install ros-<distro>-desktop ros-<distro>-ros2-contr
 
 ### 2. 下载与编译
 ```bash
-git clone https://github.com/<YOUR-USERNAME>/OpenArm.git
+git clone https://github.com/xiaokai-jin/OpenArm.git
 cd OpenArm
 colcon build --symlink-install
 ```
