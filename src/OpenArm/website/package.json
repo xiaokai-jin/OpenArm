@@ -1,0 +1,59 @@
+{
+  "name": "openarm-site",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "docusaurus": "docusaurus",
+    "start": "docusaurus start",
+    "build": "docusaurus build",
+    "swizzle": "docusaurus swizzle",
+    "deploy": "docusaurus deploy",
+    "clear": "docusaurus clear",
+    "serve": "docusaurus serve",
+    "write-translations": "docusaurus write-translations",
+    "write-heading-ids": "docusaurus write-heading-ids",
+    "fetch-popular-issues": "./scripts/fetch-popular-issues.sh",
+    "typecheck": "tsc",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix"
+  },
+  "dependencies": {
+    "@docusaurus/core": "3.9.2",
+    "@docusaurus/preset-classic": "3.9.2",
+    "@mdx-js/react": "^3.1.1",
+    "clsx": "^2.0.0",
+    "katex": "^0.16.25",
+    "prism-react-renderer": "^2.3.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.2.0",
+    "react-player": "^3.3.3",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "3.9.2",
+    "@docusaurus/tsconfig": "3.9.2",
+    "@docusaurus/types": "3.9.2",
+    "@eslint/js": "^9.36.0",
+    "eslint": "^9.38.0",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.1"
+  },
+  "browserslist": {
+    "production": [
+      ">0.5%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 3 chrome version",
+      "last 3 firefox version",
+      "last 5 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=20.0"
+  }
+}

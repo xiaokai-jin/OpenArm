@@ -1,0 +1,82 @@
+# Copyright 2025 Enactic, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Website
+on:
+  push:
+    branches:
+      - '**'
+      - '!dependabot/**'
+  pull_request:
+  schedule:
+    - cron: '0 0 * * *'
+concurrency:
+  group: ${{ github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: website
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: 'website/package.json'
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install
+        run: |
+          npm ci
+      - name: Prepare
+        if: github.repository != 'enactic/openarm'
+        run: |
+          # enactic/openarm -> openarm
+          GITHUB_REPOSITORY_NAME=${GITHUB_REPOSITORY#*/}
+          sed \
+            -i.bak \
+            -e "s,url: '.*',url: 'https://${GITHUB_REPOSITORY_OWNER}.github.io/'," \
+            -e "s,baseUrl: '/',baseUrl: '/${GITHUB_REPOSITORY_NAME}/'," \
+            docusaurus.config.ts
+      - name: Build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run fetch-popular-issues
+          npm run build
+      - name: Upload
+        id: deployment
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: website/build/
+  deploy:
+    name: Deploy
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref_name == 'main' || github.repository != 'enactic/openarm')
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

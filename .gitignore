@@ -1,0 +1,15 @@
+# ROS2 编译产物
+build/
+install/
+log/
+
+# IDE 配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 其他
+__pycache__/
+*.pyc
+.DS_Store
