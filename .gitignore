@@ -12,4 +12,6 @@ log/
 # 其他
 __pycache__/
 *.pyc
-.DS_Store
+# 本地深度解析文档 (仅限本地查阅，不上传 GitHub)
+src/core_modules_detailed_analysis.md
+README.md

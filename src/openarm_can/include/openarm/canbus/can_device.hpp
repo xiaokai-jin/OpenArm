@@ -19,7 +19,6 @@
 
 #include <cstdint>
 #include <vector>
-
 namespace openarm::canbus {
 // CAN 设备的抽象基类
 class CANDevice {
