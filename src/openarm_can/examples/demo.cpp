@@ -55,7 +55,7 @@ int main() {
         std::cout << "\n=== Enabling Motors ===" << std::endl;
         openarm.enable_all();
         // Allow time (10ms) for the motors to respond for slow operations like enabling
-        openarm.recv_all(10000);
+        openarm.recv_all(2000);
 
         // Set device mode to param and query motor id
         std::cout << "\n=== Querying Motor Recv IDs ===" << std::endl;
@@ -63,7 +63,7 @@ int main() {
         openarm.query_param_all(static_cast<int>(openarm::damiao_motor::RID::MST_ID));
         // Allow time (10ms) for the motors to respond for slow operations like querying
         // parameter from register
-        openarm.recv_all(10000);
+        openarm.recv_all(2000);
 
         // Access motors through components
         for (const auto& motor : openarm.get_arm().get_motors()) {
@@ -77,20 +77,73 @@ int main() {
                       << std::endl;
         }
 
+        // Set zero position for all motors (important!)
+        std::cout << "\n=== Setting Zero Position ===" << std::endl;
+        openarm.set_zero_all();
+        openarm.recv_all(2000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        
         // Set device mode to state and control motor
         std::cout << "\n=== Controlling Motors ===" << std::endl;
         openarm.set_callback_mode_all(openarm::damiao_motor::CallbackMode::STATE);
 
-        // Control arm motors with position control
-        openarm.get_arm().mit_control_all({openarm::damiao_motor::MITParam{2, 1, 0, 0, 0},
-                                           openarm::damiao_motor::MITParam{2, 1, 0, 0, 0},
-                                           openarm::damiao_motor::MITParam{2, 1, 0, 0, 0},
-                                           openarm::damiao_motor::MITParam{3, 1, 0, 0, 0},
-                                           openarm::damiao_motor::MITParam{3, 1, 0, 0, 0},
-                                           openarm::damiao_motor::MITParam{3, 1, 0, 0, 0},
-                                           openarm::damiao_motor::MITParam{3, 1, 0, 0, 0}});
-        openarm.recv_all(10000);
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1500));
+        // Define target positions for all 7 joints (in radians)
+        std::vector<double> target_positions = {0.5, 0.3, 0.0, 0.2, 0.0, 0.1, 0.0};
+        
+        // Per-joint control parameters (heavier joints need stronger stiffness)
+        // Motor 1-2 (DM8009): Base joints, carry most weight -> high kp
+        // Motor 3-4 (DM4340): Mid joints, moderate load -> medium kp
+        // Motor 5-7 (DM4310): Wrist joints, light load -> lower kp
+        std::vector<double> kp_values = {80.0, 80.0, 50.0, 50.0, 30.0, 30.0, 30.0};
+        std::vector<double> kd_values = {3.0, 3.0, 2.0, 2.0, 1.5, 1.5, 1.5};
+        
+        // OPTION 2: If still not tracking well, use aggressive uniform gains (uncomment below)
+        // std::vector<double> kp_values = {150.0, 150.0, 150.0, 150.0, 100.0, 100.0, 100.0};
+        // std::vector<double> kd_values = {5.0, 5.0, 5.0, 5.0, 3.0, 3.0, 3.0};
+        
+        std::cout << "Control gains - Motor 1: kp=" << kp_values[0] << ", kd=" << kd_values[0] << std::endl;
+        std::cout << "              - Motor 5: kp=" << kp_values[4] << ", kd=" << kd_values[4] << std::endl;
+        
+        // Control loop: send commands continuously for 2 seconds at ~200Hz
+        std::cout << "Starting closed-loop control for 2 seconds..." << std::endl;
+        int control_iterations = 400;  // 400 iterations at 5ms each = 2 seconds
+        
+        for (int iter = 0; iter < control_iterations; iter++) {
+            // Send control commands to all motors with per-joint gains
+            openarm.get_arm().mit_control_all({
+                openarm::damiao_motor::MITParam{kp_values[0], kd_values[0], target_positions[0], 0, 0},
+                openarm::damiao_motor::MITParam{kp_values[1], kd_values[1], target_positions[1], 0, 0},
+                openarm::damiao_motor::MITParam{kp_values[2], kd_values[2], target_positions[2], 0, 0},
+                openarm::damiao_motor::MITParam{kp_values[3], kd_values[3], target_positions[3], 0, 0},
+                openarm::damiao_motor::MITParam{kp_values[4], kd_values[4], target_positions[4], 0, 0},
+                openarm::damiao_motor::MITParam{kp_values[5], kd_values[5], target_positions[5], 0, 0},
+                openarm::damiao_motor::MITParam{kp_values[6], kd_values[6], target_positions[6], 0, 0}
+            });
+            
+            // Receive feedback
+            openarm.recv_all(2000);
+            
+            // Print progress every 50 iterations (~0.25 seconds)
+            if (iter % 50 == 0) {
+                std::cout << "\n--- Iteration " << iter << " / " << control_iterations << " ---" << std::endl;
+                int motor_idx = 0;
+                for (const auto& motor : openarm.get_arm().get_motors()) {
+                    double current_pos = motor.get_position();
+                    double error = target_positions[motor_idx] - current_pos;
+                    std::cout << "  Motor " << motor_idx + 1 
+                              << " | Target: " << target_positions[motor_idx]
+                              << " | Current: " << current_pos
+                              << " | Error: " << error << " rad" << std::endl;
+                    motor_idx++;
+                }
+            }
+            
+            // Sleep for 5ms (200Hz control rate)
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        
+        std::cout << "\n=== Control Loop Finished ===" << std::endl;
+
         // Control arm motors with torque control
         // openarm.get_arm().mit_control_all({
         //     openarm::damiao_motor::MITParam{0, 0, 0, 0, 0.1},
@@ -103,35 +156,30 @@ int main() {
         // });
         // openarm.recv_all(500);
 
-        // // Control gripper
-        // std::cout << "closing gripper..." << std::endl;
-        // openarm.get_gripper().close();
-        // openarm.recv_all(2000);
+        // Final position check
+        std::cout << "\n=== Final Position Report ===" << std::endl;
+        openarm.refresh_all();
+        openarm.recv_all(500);
         
-        // // Wait for the gripper to physically close (e.g., 1.5 seconds)
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1500));
-
-            // openarm.refresh_all();
-            // openarm.recv_all(300);
-
-            // Display arm motor states
-            for (const auto& motor : openarm.get_arm().get_motors()) {
-                std::cout << "Arm Motor: " << motor.get_send_can_id()
-                          << " position: " << motor.get_position() << std::endl;
-            }
-        //     // Display gripper state
-        //     for (const auto& motor : openarm.get_gripper().get_motors()) {
-        //         std::cout << "Gripper Motor: " << motor.get_send_can_id()
-        //                   << " position: " << motor.get_position() << std::endl;
-        //     }
-        // }
-        //失能所有电机
-        for(int i = 0; i < 3; i++) {
-        openarm.disable_all();
-        openarm.recv_all(5000);
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        std::cout << "Disabling motors..." << std::endl;
+        int motor_idx = 0;
+        for (const auto& motor : openarm.get_arm().get_motors()) {
+            double current_pos = motor.get_position();
+            double error = target_positions[motor_idx] - current_pos;
+            std::cout << "Motor " << motor_idx + 1 
+                      << " | Target: " << target_positions[motor_idx]
+                      << " rad | Final: " << current_pos 
+                      << " rad | Final Error: " << error << " rad ("
+                      << (std::abs(error) * 180.0 / M_PI) << " deg)" << std::endl;
+            motor_idx++;
         }
+        
+        // Optional: Disable all motors (uncomment if needed)
+        // std::cout << "\n=== Disabling Motors ===" << std::endl;
+        // for(int i = 0; i < 3; i++) {
+        //     openarm.disable_all();
+        //     openarm.recv_all(2000);
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // }
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
