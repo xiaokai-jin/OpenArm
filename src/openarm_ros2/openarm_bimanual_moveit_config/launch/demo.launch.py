@@ -27,6 +27,7 @@ def generate_robot_description(
     right_can_interface,
     left_can_interface,
     arm_prefix,
+    hand,
 ):
     """Render Xacro and return XML string."""
     description_package_str = context.perform_substitution(description_package)
@@ -37,6 +38,7 @@ def generate_robot_description(
     right_can_interface_str = context.perform_substitution(right_can_interface)
     left_can_interface_str = context.perform_substitution(left_can_interface)
     arm_prefix_str = context.perform_substitution(arm_prefix)
+    hand_str = context.perform_substitution(hand)
 
     xacro_path = os.path.join(
         get_package_share_directory(description_package_str),
@@ -55,6 +57,7 @@ def generate_robot_description(
             "ros2_control": "true",
             "left_can_interface": left_can_interface_str,
             "right_can_interface": right_can_interface_str,
+            "hand": hand_str,
             # arm_prefix unused inside xacro but kept for completeness
         },
     ).toprettyxml(indent="  ")
@@ -73,6 +76,7 @@ def robot_nodes_spawner(
     right_can_interface,
     left_can_interface,
     arm_prefix,
+    hand,
 ):
     robot_description = generate_robot_description(
         context,
@@ -84,6 +88,7 @@ def robot_nodes_spawner(
         right_can_interface,
         left_can_interface,
         arm_prefix,
+        hand,
     )
 
     controllers_file_str = context.perform_substitution(controllers_file)
@@ -138,22 +143,27 @@ def controller_spawner(context: LaunchContext, robot_controller):
     else:
         raise ValueError(f"Unknown robot_controller: {robot_controller_str}")
 
+    left_spawner_func = lambda context: [
+        Node(
+            package="controller_manager",
+             executable="spawner",
+             name="spawner_left_",
+             arguments=[left, "-c", "/controller_manager"],
+            )
+        ]
+    right_spawner_func = lambda context: [
+        Node(
+            package="controller_manager",
+             executable="spawner",
+             name="spawner_right_",
+             arguments=[right, "-c", "/controller_manager"],
+            )
+        ]
+    delayed_left_spawner = TimerAction(period=1.5, actions=[OpaqueFunction(function=left_spawner_func)])
+    delayed_right_spawner = TimerAction(period=2.0, actions=[OpaqueFunction(function=right_spawner_func)])
     return [
-        # 左侧控制器 → 左侧 controller_manager
-        Node(
-            package="controller_manager",
-            executable="spawner",
-            arguments=[left, "-c", "/left/controller_manager"],
-            name="spawner_left_" + left,
-        ),
-        # 右侧控制器 → 右侧 controller_manager
-        Node(
-            package="controller_manager",
-            executable="spawner",
-            arguments=[right, "-c", "/right/controller_manager"],
-            name="spawner_right_" + right,
-        ),
-    ]
+        delayed_left_spawner,
+        delayed_right_spawner]
 
 def generate_launch_description():
     declared_arguments = [
@@ -184,6 +194,7 @@ def generate_launch_description():
             "controllers_file",
             default_value="openarm_v10_bimanual_controllers.yaml",
         ),
+        DeclareLaunchArgument("hand", default_value="true"),
     ]
 
     description_package = LaunchConfiguration("description_package")
@@ -197,6 +208,7 @@ def generate_launch_description():
     right_can_interface = LaunchConfiguration("right_can_interface")
     left_can_interface = LaunchConfiguration("left_can_interface")
     arm_prefix = LaunchConfiguration("arm_prefix")
+    hand = LaunchConfiguration("hand")
 
     controllers_file = PathJoinSubstitution(
         [FindPackageShare(runtime_config_package), "config",
@@ -215,6 +227,7 @@ def generate_launch_description():
             right_can_interface,
             left_can_interface,
             arm_prefix,
+            hand,
         ],
     )
 
@@ -238,19 +251,19 @@ def generate_launch_description():
     left_gripper_spawner = Node(
     package="controller_manager",
     executable="spawner",
-    arguments=["left_gripper_controller", "-c", "/left/controller_manager"],
+    arguments=["left_gripper_controller", "-c", "/controller_manager"],
     )
 
     right_gripper_spawner = Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["right_gripper_controller", "-c", "/right/controller_manager"],
+        arguments=["right_gripper_controller", "-c", "/controller_manager"],
     )
     delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
     delayed_arm_ctrl = TimerAction(
         period=1.0, actions=[controller_spawner_func])
-    delayed_gripper_left = TimerAction(period=1.0, actions=[left_gripper_spawner]) #1
-    delayed_gripper_right = TimerAction(period=1.0, actions=[right_gripper_spawner]) #2
+    delayed_gripper_left = TimerAction(period=3.0, actions=[left_gripper_spawner])
+    delayed_gripper_right = TimerAction(period=3.5, actions=[right_gripper_spawner])
 
     moveit_config = MoveItConfigsBuilder(
         "openarm", package_name="openarm_bimanual_moveit_config"

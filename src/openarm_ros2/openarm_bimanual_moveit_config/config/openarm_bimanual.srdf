@@ -88,7 +88,7 @@
     <group_state name="closed" group="right_gripper">
         <joint name="openarm_right_finger_joint1" value="0"/>
     </group_state>
-    <group_state name="half closed" group="left_gripper">
+    <group_state name="half_closed" group="left_gripper">
         <joint name="openarm_left_finger_joint1" value="0.022"/>
     </group_state>
     <group_state name="half_closed" group="right_gripper">

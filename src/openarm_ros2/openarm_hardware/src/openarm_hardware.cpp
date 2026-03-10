@@ -91,10 +91,10 @@ hardware_interface::CallbackReturn OpenArmHW::on_configure(
     const rclcpp_lifecycle::State& /*previous_state*/) {
   read(rclcpp::Time(0), rclcpp::Duration(0, 0));
   // zero position or calibrate to pose
-  // for (std::size_t i = 0; i < curr_dof; ++i)
-  // {
-  //   motor_control_->set_zero_position(*motors_[i]);
-  // }
+  for (std::size_t i = 0; i < curr_dof; ++i)
+  {
+    motor_control_->set_zero_position(*motors_[i]);
+  }
 
   return CallbackReturn::SUCCESS;
 }
