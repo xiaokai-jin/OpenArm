@@ -1,6 +1,6 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 138
+    Help Height: 0
     Name: Displays
     Property Tree Widget:
       Expanded:
@@ -8,7 +8,7 @@ Panels:
         - /MotionPlanning1/Scene Robot1
         - /MotionPlanning1/Planning Request1
       Splitter Ratio: 0.5
-    Tree Height: 254
+    Tree Height: 175
   - Class: rviz_common/Help
     Name: Help
   - Class: rviz_common/Views
@@ -16,6 +16,8 @@ Panels:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
+  - Class: rviz_visual_tools/RvizVisualToolsGui
+    Name: RvizVisualToolsGui
 Visualization Manager:
   Class: ""
   Displays:
@@ -127,10 +129,6 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          openarm_left_link8:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
           openarm_left_right_finger:
             Alpha: 1
             Show Axes: false
@@ -190,10 +188,6 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          openarm_right_link8:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
           openarm_right_right_finger:
             Alpha: 1
             Show Axes: false
@@ -308,10 +302,6 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          openarm_left_link8:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
           openarm_left_right_finger:
             Alpha: 1
             Show Axes: false
@@ -371,10 +361,6 @@ Visualization Manager:
             Show Axes: false
             Show Trail: false
             Value: true
-          openarm_right_link8:
-            Alpha: 1
-            Show Axes: false
-            Show Trail: false
           openarm_right_right_finger:
             Alpha: 1
             Show Axes: false
@@ -389,6 +375,115 @@ Visualization Manager:
         Show Robot Visual: true
       Value: true
       Velocity_Scaling_Factor: 0.1
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        Text: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /openarm_marker_visual_tools
+      Value: true
+    - Class: rviz_default_plugins/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        openarm_body_link0:
+          Value: true
+        openarm_left_hand:
+          Value: true
+        openarm_left_hand_tcp:
+          Value: true
+        openarm_left_left_finger:
+          Value: true
+        openarm_left_link0:
+          Value: true
+        openarm_left_link1:
+          Value: true
+        openarm_left_link2:
+          Value: true
+        openarm_left_link3:
+          Value: true
+        openarm_left_link4:
+          Value: true
+        openarm_left_link5:
+          Value: true
+        openarm_left_link6:
+          Value: true
+        openarm_left_link7:
+          Value: true
+        openarm_left_right_finger:
+          Value: true
+        openarm_right_hand:
+          Value: true
+        openarm_right_hand_tcp:
+          Value: true
+        openarm_right_left_finger:
+          Value: true
+        openarm_right_link0:
+          Value: true
+        openarm_right_link1:
+          Value: true
+        openarm_right_link2:
+          Value: true
+        openarm_right_link3:
+          Value: true
+        openarm_right_link4:
+          Value: true
+        openarm_right_link5:
+          Value: true
+        openarm_right_link6:
+          Value: true
+        openarm_right_link7:
+          Value: true
+        openarm_right_right_finger:
+          Value: true
+        world:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: false
+      Tree:
+        world:
+          openarm_body_link0:
+            openarm_left_link0:
+              openarm_left_link1:
+                openarm_left_link2:
+                  openarm_left_link3:
+                    openarm_left_link4:
+                      openarm_left_link5:
+                        openarm_left_link6:
+                          openarm_left_link7:
+                            openarm_left_hand:
+                              openarm_left_hand_tcp:
+                                {}
+                              openarm_left_left_finger:
+                                {}
+                              openarm_left_right_finger:
+                                {}
+            openarm_right_link0:
+              openarm_right_link1:
+                openarm_right_link2:
+                  openarm_right_link3:
+                    openarm_right_link4:
+                      openarm_right_link5:
+                        openarm_right_link6:
+                          openarm_right_link7:
+                            openarm_right_hand:
+                              openarm_right_hand_tcp:
+                                {}
+                              openarm_right_left_finger:
+                                {}
+                              openarm_right_right_finger:
+                                {}
+      Update Interval: 0
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -407,7 +502,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 1.3624029159545898
+      Distance: 2.3323678970336914
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -422,16 +517,15 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.31999996304512024
+      Pitch: 0.37000006437301636
       Target Frame: world
       Value: Orbit (rviz_default_plugins)
-      Yaw: 0.16200032830238342
+      Yaw: 6.110177040100098
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Width: 1280
-  Height: 720
+  Height: 1016
   Help:
     collapsed: false
   Hide Left Dock: false
@@ -440,8 +534,11 @@ Window Geometry:
     collapsed: false
   MotionPlanning - Trajectory Slider:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000036a000006f0fc0200000005fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000007000fffffffb000000100044006900730070006c0061007900730100000069000001ec0000017800fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e006701000002610000036f0000028e00fffffffb0000000800480065006c0070000000029a0000006e000000cf00fffffffb0000000a0056006900650077007301000005dc0000017d0000012300ffffff0000096a000006f000000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000036a0000039efc0200000006fb00000044004d006f00740069006f006e0050006c0061006e006e0069006e00670020002d0020005400720061006a006500630074006f0072007900200053006c00690064006500720000000000ffffffff0000004100fffffffb000000100044006900730070006c006100790073010000003d000000ec000000c900fffffffb0000001c004d006f00740069006f006e0050006c0061006e006e0069006e0067010000012f000001a80000017d00fffffffb0000000800480065006c0070000000029a0000006e0000006e00fffffffb0000000a0056006900650077007301000002dd000000b7000000a400fffffffb00000024005200760069007a00560069007300750061006c0054006f006f006c0073004700750069010000039a000000410000004100ffffff000003ca0000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  RvizVisualToolsGui:
+    collapsed: false
   Views:
     collapsed: false
-  X: 0
-  Y: 64
+  Width: 1850
+  X: 70
+  Y: 27

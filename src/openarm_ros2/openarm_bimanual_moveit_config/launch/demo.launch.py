@@ -270,12 +270,27 @@ def generate_launch_description():
     ).to_moveit_configs()
 
     moveit_params = moveit_config.to_dict()
+    # Add robot description to MoveIt parameters
+    planning_scene_monitor_parameters = {
+        "publish_planning_scene": True,
+        "publish_geometry_updates": True,
+        "publish_state_updates": True,
+        "publish_transforms_updates": True,
+        "publish_robot_description": True,
+        "publish_robot_description_semantic": True,
+    }
 
+    # run_move_group_node = Node(
+    #     package="moveit_ros_move_group",
+    #     executable="move_group",
+    #     output="screen",
+    #     parameters=[moveit_params],
+    # )
     run_move_group_node = Node(
         package="moveit_ros_move_group",
         executable="move_group",
         output="screen",
-        parameters=[moveit_params],
+        parameters=[moveit_params, planning_scene_monitor_parameters],
     )
 
     rviz_cfg = os.path.join(
