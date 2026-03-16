@@ -16,3 +16,4 @@ __pycache__/
 src/core_modules_detailed_analysis.md
 src/openarm_kinematics_dynamics_modeling_guide.md
 src/openarm_ros2/openarm_bimanual_moveit_config/config/kinematics_solvers_explanation.md
+src/openarm_description/urdf/arm/*_analysis.md

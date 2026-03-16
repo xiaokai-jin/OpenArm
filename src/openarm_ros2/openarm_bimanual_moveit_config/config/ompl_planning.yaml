@@ -1,0 +1,268 @@
+planning_plugin: ompl_interface/OMPLPlanner
+request_adapters: >-
+  default_planner_request_adapters/AddTimeOptimalParameterization
+  default_planner_request_adapters/ResolveConstraintFrames
+  default_planner_request_adapters/FixWorkspaceBounds
+  default_planner_request_adapters/FixStartStateBounds
+  default_planner_request_adapters/FixStartStateCollision
+  default_planner_request_adapters/FixStartStatePathConstraints
+start_state_max_bounds_error: 0.1
+planner_configs:
+  SBLkConfigDefault:
+    type: geometric::SBL
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0，若为0.0将在setup()时自动设置
+  ESTkConfigDefault:
+    type: geometric::EST
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0，若为0.0将在setup()时自动设置
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+  LBKPIECEkConfigDefault:
+    type: geometric::LBKPIECE
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    border_fraction: 0.9  # 聚焦边界的时间比例。默认 0.9
+    min_valid_path_fraction: 0.5  # 接受部分有效移动的阈值比例。默认 0.5
+  BKPIECEkConfigDefault:
+    type: geometric::BKPIECE
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    border_fraction: 0.9  # 聚焦边界的时间比例。默认 0.9
+    failed_expansion_score_factor: 0.5  # 扩展失败时分数的缩放因子。默认 0.5
+    min_valid_path_fraction: 0.5  # 接受部分有效移动的阈值比例。默认 0.5
+  KPIECEkConfigDefault:
+    type: geometric::KPIECE
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+    border_fraction: 0.9  # 聚焦边界的时间比例。默认 0.9 (范围 0.0 到 1.0]
+    failed_expansion_score_factor: 0.5  # 扩展失败时分数的缩放因子。默认 0.5
+    min_valid_path_fraction: 0.5  # 接受部分有效移动的阈值比例。默认 0.5
+  RRTkConfigDefault:
+    type: geometric::RRT
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+  RRTConnectkConfigDefault:
+    type: geometric::RRTConnect
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+  RRTstarkConfigDefault:
+    type: geometric::RRTstar
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+    delay_collision_checking: 1  # 找到无碰撞父节点后立即停止碰撞检查。默认 1
+  TRRTkConfigDefault:
+    type: geometric::TRRT
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+    max_states_failed: 10  # 何时开始提高温度的失败次数阈值。默认 10
+    temp_change_factor: 2.0  # 温度增加或降低的因子。默认 2.0
+    min_temperature: 10e-10  # 温度变化的下限。默认 10e-10
+    init_temperature: 10e-6  # 初始温度。默认 10e-6
+    frountier_threshold: 0.0  # 新状态与最近邻居的距离阈值，用于取消前沿资格。默认0.0
+    frountierNodeRatio: 0.1  # 1/10，即每10个前沿节点对应1个非前沿节点。默认 0.1
+    k_constant: 0.0  # 用于标准化表达式的值。默认 0.0，并在setup()中设置
+  PRMkConfigDefault:
+    type: geometric::PRM
+    max_nearest_neighbors: 10  # 使用的k个最近邻居数。默认 10
+  PRMstarkConfigDefault:
+    type: geometric::PRMstar
+  FMTkConfigDefault:
+    type: geometric::FMT
+    num_samples: 1000  # 规划器应采样的状态数量。默认 1000
+    radius_multiplier: 1.1  # 用于最近邻搜索半径的乘数。默认 1.1
+    nearest_k: 1  # 使用 K-nearest 策略。默认 1
+    cache_cc: 1  # 使用碰撞检查缓存。默认 1
+    heuristics: 0  # 激活 cost-to-go 启发式算法。默认 0
+    extended_fmt: 1  # 激活扩展 FMT*：如果规划未成功完成则添加新样本。默认 1
+  BFMTkConfigDefault:
+    type: geometric::BFMT
+    num_samples: 1000  # 规划器应采样的状态数量。默认 1000
+    radius_multiplier: 1.0  # 用于最近邻搜索半径的乘数。默认 1.0
+    nearest_k: 1  # 使用 K-nearest 策略。默认 1
+    balanced: 0  # 探索策略：balanced为true时每次迭代扩展一棵树；false时将选择最大cost-to-go最低的树。默认 1
+    optimality: 1  # 终止策略：optimality为true时找到最佳路径才完成；否则找到第一条可行路径即完成。默认 1
+    heuristics: 1  # 激活 cost-to-go 启发式算法。默认 1
+    cache_cc: 1  # 使用碰撞检查缓存。默认 1
+    extended_fmt: 1  # 激活扩展 FMT*：如果规划未成功完成则添加新样本。默认 1
+  PDSTkConfigDefault:
+    type: geometric::PDST
+  STRIDEkConfigDefault:
+    type: geometric::STRIDE
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+    use_projected_distance: 0  # 近邻是否基于状态投影距离而非状态空间距离计算。默认 0
+    degree: 16  # GNAT树(Geometric Near-neighbor Access Tree)中节点的期望度数。默认 16
+    max_degree: 18  # GNAT中节点的最大度数。默认 18
+    min_degree: 12  # GNAT中节点的最小度数。默认 12
+    max_pts_per_leaf: 6  # GNAT叶子节点的最大点数。默认 6
+    estimated_dimension: 0.0  # 自由空间的估计维度。默认 0.0
+    min_valid_path_fraction: 0.2  # 接受部分有效移动的阈值比例。默认 0.2
+  BiTRRTkConfigDefault:
+    type: geometric::BiTRRT
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    temp_change_factor: 0.1  # 温度增加或降低的因子。默认 0.1
+    init_temperature: 100  # 初始温度。默认 100
+    frountier_threshold: 0.0  # 新状态与最近邻居的距离阈值，用于取消前沿资格。默认 0.0
+    frountier_node_ratio: 0.1  # 每10个前沿节点对应1个非前沿节点。默认 0.1
+    cost_threshold: 1e300  # 成本阈值。任何不优于该阈值的运动都不会被扩展。默认 inf
+  LBTRRTkConfigDefault:
+    type: geometric::LBTRRT
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+    epsilon: 0.4  # 最优性近似因子。默认 0.4
+  BiESTkConfigDefault:
+    type: geometric::BiEST
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+  ProjESTkConfigDefault:
+    type: geometric::ProjEST
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+    goal_bias: 0.05  # 当靠近目标时选择目标的概率。默认 0.05
+  LazyPRMkConfigDefault:
+    type: geometric::LazyPRM
+    range: 0.0  # 添加到树中的最大运动距离。默认 0.0
+  LazyPRMstarkConfigDefault:
+    type: geometric::LazyPRMstar
+  SPARSkConfigDefault:
+    type: geometric::SPARS
+    stretch_factor: 3.0  #路线图扩展因子。路径质量的乘性上限，超过3意义不大。默认 3.0
+    sparse_delta_fraction: 0.25  # 连接距离的delta比例，表示稀疏样本的可视范围。默认 0.25
+    dense_delta_fraction: 0.001  # 用于接口检测的delta比例。默认 0.001
+    max_failures: 1000  # 最大连续失败限制。默认 1000
+  SPARStwokConfigDefault:
+    type: geometric::SPARStwo
+    stretch_factor: 3.0  #路线图扩展因子。路径质量的乘性上限。默认 3.0
+    sparse_delta_fraction: 0.25  # 连接距离的delta比例。默认 0.25
+    dense_delta_fraction: 0.001  # 用于接口检测的delta比例。默认 0.001
+    max_failures: 5000  # 最大连续失败限制。默认 5000
+  TrajOptDefault:
+    type: geometric::TrajOpt
+ 
+upper_body:
+  planner_configs:
+    - SBLkConfigDefault
+    - ESTkConfigDefault
+    - LBKPIECEkConfigDefault
+    - BKPIECEkConfigDefault
+    - KPIECEkConfigDefault
+    - RRTkConfigDefault
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - TRRTkConfigDefault
+    - PRMkConfigDefault
+    - PRMstarkConfigDefault
+    - FMTkConfigDefault
+    - BFMTkConfigDefault
+    - PDSTkConfigDefault
+    - STRIDEkConfigDefault
+    - BiTRRTkConfigDefault
+    - LBTRRTkConfigDefault
+    - BiESTkConfigDefault
+    - ProjESTkConfigDefault
+    - LazyPRMkConfigDefault
+    - LazyPRMstarkConfigDefault
+    - SPARSkConfigDefault
+    - SPARStwokConfigDefault
+    - TrajOptDefault
+
+left_arm:
+  planner_configs:
+    - SBLkConfigDefault
+    - ESTkConfigDefault
+    - LBKPIECEkConfigDefault
+    - BKPIECEkConfigDefault
+    - KPIECEkConfigDefault
+    - RRTkConfigDefault
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - TRRTkConfigDefault
+    - PRMkConfigDefault
+    - PRMstarkConfigDefault
+    - FMTkConfigDefault
+    - BFMTkConfigDefault
+    - PDSTkConfigDefault
+    - STRIDEkConfigDefault
+    - BiTRRTkConfigDefault
+    - LBTRRTkConfigDefault
+    - BiESTkConfigDefault
+    - ProjESTkConfigDefault
+    - LazyPRMkConfigDefault
+    - LazyPRMstarkConfigDefault
+    - SPARSkConfigDefault
+    - SPARStwokConfigDefault
+    - TrajOptDefault
+
+right_arm:
+  planner_configs:
+    - SBLkConfigDefault
+    - ESTkConfigDefault
+    - LBKPIECEkConfigDefault
+    - BKPIECEkConfigDefault
+    - KPIECEkConfigDefault
+    - RRTkConfigDefault
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - TRRTkConfigDefault
+    - PRMkConfigDefault
+    - PRMstarkConfigDefault
+    - FMTkConfigDefault
+    - BFMTkConfigDefault
+    - PDSTkConfigDefault
+    - STRIDEkConfigDefault
+    - BiTRRTkConfigDefault
+    - LBTRRTkConfigDefault
+    - BiESTkConfigDefault
+    - ProjESTkConfigDefault
+    - LazyPRMkConfigDefault
+    - LazyPRMstarkConfigDefault
+    - SPARSkConfigDefault
+    - SPARStwokConfigDefault
+    - TrajOptDefault
+
+left_side:
+  planner_configs:
+    - SBLkConfigDefault
+    - ESTkConfigDefault
+    - LBKPIECEkConfigDefault
+    - BKPIECEkConfigDefault
+    - KPIECEkConfigDefault
+    - RRTkConfigDefault
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - TRRTkConfigDefault
+    - PRMkConfigDefault
+    - PRMstarkConfigDefault
+    - FMTkConfigDefault
+    - BFMTkConfigDefault
+    - PDSTkConfigDefault
+    - STRIDEkConfigDefault
+    - BiTRRTkConfigDefault
+    - LBTRRTkConfigDefault
+    - BiESTkConfigDefault
+    - ProjESTkConfigDefault
+    - LazyPRMkConfigDefault
+    - LazyPRMstarkConfigDefault
+    - SPARSkConfigDefault
+    - SPARStwokConfigDefault
+    - TrajOptDefault    
+
+right_side:
+  planner_configs:
+    - SBLkConfigDefault
+    - ESTkConfigDefault
+    - LBKPIECEkConfigDefault
+    - BKPIECEkConfigDefault
+    - KPIECEkConfigDefault
+    - RRTkConfigDefault
+    - RRTConnectkConfigDefault
+    - RRTstarkConfigDefault
+    - TRRTkConfigDefault
+    - PRMkConfigDefault
+    - PRMstarkConfigDefault
+    - FMTkConfigDefault
+    - BFMTkConfigDefault
+    - PDSTkConfigDefault
+    - STRIDEkConfigDefault
+    - BiTRRTkConfigDefault
+    - LBTRRTkConfigDefault
+    - BiESTkConfigDefault
+    - ProjESTkConfigDefault
+    - LazyPRMkConfigDefault
+    - LazyPRMstarkConfigDefault
+    - SPARSkConfigDefault
+    - SPARStwokConfigDefault
+    - TrajOptDefault
