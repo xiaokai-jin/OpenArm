@@ -259,11 +259,27 @@ def generate_launch_description():
         executable="spawner",
         arguments=["right_gripper_controller", "-c", "/controller_manager"],
     )
+
+    # 添加 stiffness 和 damping spawner
+    stiffness_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["stiffness_controller", "-c", "/controller_manager"],
+    )
+
+    damping_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["damping_controller", "-c", "/controller_manager"],
+    )
+
     delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
     delayed_arm_ctrl = TimerAction(
         period=1.0, actions=[controller_spawner_func])
     delayed_gripper_left = TimerAction(period=3.0, actions=[left_gripper_spawner])
     delayed_gripper_right = TimerAction(period=3.5, actions=[right_gripper_spawner])
+    delayed_stiffness = TimerAction(period=4.0, actions=[stiffness_spawner])
+    delayed_damping = TimerAction(period=4.5, actions=[damping_spawner])
 
     moveit_config = MoveItConfigsBuilder(
         "openarm", package_name="openarm_bimanual_moveit_config"
@@ -315,6 +331,8 @@ def generate_launch_description():
             delayed_arm_ctrl,
             delayed_gripper_left,
             delayed_gripper_right,
+            delayed_stiffness,
+            delayed_damping,
             run_move_group_node,
             rviz_node,
         ]

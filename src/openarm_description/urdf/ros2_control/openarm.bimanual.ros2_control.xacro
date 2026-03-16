@@ -37,6 +37,8 @@
           <command_interface name="position"/>
           <command_interface name="velocity"/>
           <command_interface name="effort"/>
+          <command_interface name="stiffness"/>
+          <command_interface name="damping"/>
 
           <state_interface name="position">
             <param name="initial_value">${initial_position}</param>

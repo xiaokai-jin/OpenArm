@@ -42,9 +42,10 @@ static const Control_Type CONTROL_MODE = Control_Type::MIT;
 static const std::size_t ARM_DOF = 7;
 static const std::size_t GRIPPER_DOF = 1;
 static const std::size_t TOTAL_DOF = ARM_DOF + GRIPPER_DOF;
-static const std::array<double, TOTAL_DOF> KP = {80.0, 80.0, 20.0, 55.0,
+// 将写死的常量改为初始默认值数组，便于在cpp中由于接口绑定动态值
+static const std::array<double, TOTAL_DOF> DEFAULT_KP = {80.0, 80.0, 20.0, 55.0,
                                                  5.0,  5.0,  5.0,  0.5};
-static const std::array<double, TOTAL_DOF> KD = {2.75, 2.5, 0.7, 0.4,
+static const std::array<double, TOTAL_DOF> DEFAULT_KD = {2.75, 2.5, 0.7, 0.4,
                                                  0.7,  0.6, 0.5, 0.1};
 static const double START_POS_TOLERANCE_RAD = 0.1;
 static const double POS_JUMP_TOLERANCE_RAD = 3.1415 / 16.0;
@@ -101,6 +102,8 @@ class OpenArmHW : public hardware_interface::SystemInterface {
   std::vector<double> vel_states_;
   std::vector<double> tau_ff_commands_;
   std::vector<double> tau_states_;
+  std::vector<double> kp_commands_; // 新增的 KP 动态增益接口变量
+  std::vector<double> kd_commands_; // 新增的 KD 动态增益接口变量
   std::vector<std::unique_ptr<Motor>> motors_;
 
   void refresh_motors();

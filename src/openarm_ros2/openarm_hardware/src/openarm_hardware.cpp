@@ -81,6 +81,19 @@ hardware_interface::CallbackReturn OpenArmHW::on_init(
   vel_commands_.resize(curr_dof, 0.0);
   tau_states_.resize(curr_dof, 0.0);
   tau_ff_commands_.resize(curr_dof, 0.0);
+  
+  kp_commands_.resize(curr_dof, 0.0);
+  kd_commands_.resize(curr_dof, 0.0);
+  // 使用预设的各个关节不同的硬编码值作为初始动态参数
+  for (size_t i = 0; i < ARM_DOF; ++i) {
+    kp_commands_[i] = DEFAULT_KP[i];
+    kd_commands_[i] = DEFAULT_KD[i];
+  }
+  if (USING_GRIPPER) {
+    kp_commands_[GRIPPER_INDEX] = DEFAULT_KP[GRIPPER_INDEX];
+    kd_commands_[GRIPPER_INDEX] = DEFAULT_KD[GRIPPER_INDEX];
+  }
+
   refresh_motors();
   read(rclcpp::Time(0), rclcpp::Duration(0, 0));
 
@@ -133,6 +146,10 @@ OpenArmHW::export_command_interfaces() {
     command_interfaces.emplace_back(hardware_interface::CommandInterface(
         info_.joints[i].name, hardware_interface::HW_IF_EFFORT,
         &tau_ff_commands_[i]));
+    command_interfaces.emplace_back(hardware_interface::CommandInterface(
+        info_.joints[i].name, "stiffness", &kp_commands_[i]));
+    command_interfaces.emplace_back(hardware_interface::CommandInterface(
+        info_.joints[i].name, "damping", &kd_commands_[i]));
   }
 
   return command_interfaces;
@@ -167,7 +184,7 @@ hardware_interface::CallbackReturn OpenArmHW::on_activate(
       } else {
         command -= max_step;
       }
-      motor_control_->controlMIT(*motors_[m], KP[m], KD[m], command, 0.0, 0.0);
+      motor_control_->controlMIT(*motors_[m], kp_commands_[m], kd_commands_[m], command, 0.0, 0.0);
     }
     if (all_zero) {
       zeroed = true;
@@ -232,13 +249,13 @@ hardware_interface::return_type OpenArmHW::write(
                    pos_commands_[i]);
       return hardware_interface::return_type::ERROR;
     }
-    motor_control_->controlMIT(*motors_[i], KP.at(i), KD.at(i),
+    motor_control_->controlMIT(*motors_[i], kp_commands_[i], kd_commands_[i],
                                pos_commands_[i], vel_commands_[i],
                                tau_ff_commands_[i]);
   }
   if (USING_GRIPPER) {
     motor_control_->controlMIT(
-        *motors_[GRIPPER_INDEX], KP.at(GRIPPER_INDEX), KD.at(GRIPPER_INDEX),
+        *motors_[GRIPPER_INDEX], kp_commands_[GRIPPER_INDEX], kd_commands_[GRIPPER_INDEX],
         -pos_commands_[GRIPPER_INDEX] / GRIPPER_REFERENCE_GEAR_RADIUS_M *
             GRIPPER_GEAR_DIRECTION_MULTIPLIER,
         vel_commands_[GRIPPER_INDEX] / GRIPPER_REFERENCE_GEAR_RADIUS_M *
