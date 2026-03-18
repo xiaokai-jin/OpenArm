@@ -76,14 +76,36 @@ public:
     void Setstate(int state);
     void Shutdown(void);
 
+    /**
+     * @brief 动态设置阻尼、刚度、摩擦力补偿等控制器相关参数
+     * @param Kp 达妙电机 MIT 模式下的被动刚度系数位置(阻抗参数)
+     * @param Kd 达妙电机 MIT 模式下的被动阻尼系数速度(阻抗参数)
+     * @param Fc 库仑摩擦力系数
+     * @param k  双曲正切函数摩擦力形状参数，控制在低速下的过渡平滑度
+     * @param Fv 粘滞摩擦力系数
+     * @param Fo 静态推力/偏移残余补偿
+     */
     void SetParameter(const std::vector<double> &Kp, const std::vector<double> &Kd,
                       const std::vector<double> &Fc, const std::vector<double> &k,
                       const std::vector<double> &Fv, const std::vector<double> &Fo);
 
+    /**
+     * @brief [安全策略] 插值调整初始位置
+     *        在上电/算法启动时，不直接输出目标力，而是通过多个 step 线性插值，平滑移动，避免抽打/剧烈运动。
+     */
     bool AdjustPosition(void);
 
-    // Compute torque based on bilateral
+    /**
+     * @brief 双向遥操作(Bilateral)通信步进
+     *        处理主臂(Leader)与从臂(Follower)的双向力与位置耦合。
+     *        计算并下发重力、科里奥利力与摩擦力前馈，并通过底层 MIT 协议进行力控补偿。
+     */
     bool bilateral_step();
+    
+    /**
+     * @brief 单向控制(Unilateral)通信步进
+     *        只处理单方向跟随指令(例如仅仅主臂传位置，从臂跟随，不反向传递力矩)。
+     */
     bool unilateral_step();
 
     // NOTE! Control() class operates on "joints", while the underlying
@@ -94,8 +116,17 @@ public:
     void ComputeJointVelocity(const double *motor_velocity, double *joint_velocity);
     void ComputeMotorTorque(const double *joint_torque, double *motor_torque);
 
-    // void ComputeFriction(const double *velocity, double *friction);
+    /**
+     * @brief 计算并返回摩擦力补偿力矩
+     *        使用连续滑移模型 (包含粘滞与基于 Tanh 函数的平滑化库仑摩擦力)
+     */
     void ComputeFriction(const double *velocity, double *friction, size_t index);
     void ComputeGravity(const double *position, double *gravity);
+    
+    /**
+     * @brief [安全诊断] 振动/共振检测
+     *        通过缓存近几帧控制循环的速度滑动窗口，计算方差/标准差。
+     *        若速度标准差突变超过安全阈值 `VIB_THRESHOLD`，则报告危险，常用于触发掉电急停。
+     */
     bool DetectVibration(const double *velocity, bool *what_axis);
 };

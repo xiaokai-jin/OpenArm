@@ -20,34 +20,44 @@
 
 class Differentiator {
 private:
-    double Ts_;                            // Sampling time
-    double velocity_z1_[NMOTORS] = {0.0};  // Velocity (1 step before)
-    double position_z1_[NMOTORS] = {0.0};  // Position (1 step before)
-    double acc_z1_[NMOTORS] = {0.0};
-    double acc_[NMOTORS] = {0.0};
+    double Ts_;                            // 采样时间 (Sampling time), 控制周期，例如0.001s(1kHz)
+    double velocity_z1_[NMOTORS] = {0.0};  // 上一时刻的速度缓冲 (Velocity 1 step before)
+    double position_z1_[NMOTORS] = {0.0};  // 上一时刻的位置缓冲 (Position 1 step before)
+    double acc_z1_[NMOTORS] = {0.0};       // 上一时刻的加速度缓冲
+    double acc_[NMOTORS] = {0.0};          // 当前计算的加速度
 
 public:
     Differentiator(double Ts) : Ts_(Ts) {}
 
-    /*
-     * Compute the motor speed by taking the derivative of
-     * the motion.
+    /**
+     * @brief 对位置信号求导计算速度。
+     *        如果不加滤波直接 (p - p_old)/Ts，位置传感器的量化噪声会被极度放大。
+     *        这里采用了一阶低通滤波器结合差分： v = a * v_old + b * (p - p_old)
      */
     void Differentiate(const double *position, double *velocity) {
+        // 低通滤波器的离散化参数公式：基于截至频率 CUTOFF_FREQUENCY
         double a = 1.0 / (1.0 + Ts_ * CUTOFF_FREQUENCY);
         double b = a * CUTOFF_FREQUENCY;
 
         for (int i = 0; i < NMOTORS; i++) {
+            // 初始化防止第一步产生巨大阶跃 (导数爆炸)
             if (position_z1_[i] == 0.0) {
                 position_z1_[i] = position[i];
             }
 
+            // 速度 = 上次速度的衰减(低通) + 位置差分的平滑放大
             velocity[i] = velocity_z1_[i] * a + b * (position[i] - position_z1_[i]);
+            
+            // 更新上一时刻状态
             position_z1_[i] = position[i];
             velocity_z1_[i] = velocity[i];
         }
     }
 
+    /**
+     * @brief 基于观测器的微分计算 (带有前馈扭矩/加速度观测的模型)
+     *        利用动力学中 torque/mass = 加速度的关系，结合位置差分计算速度和加速度，使得速度估算更迅速且不滞后。
+     */
     void Differentiate_w_obs(const double *position, double *velocity, double *mass,
                              double *input_torque) {
         double a = 1.0 / (1.0 + Ts_ * CUTOFF_FREQUENCY);
@@ -59,8 +69,12 @@ public:
                 acc_z1_[i] = acc_[i];
             }
 
+            // 根据 牛顿第二定律 a = tau / M 前馈计算加速度并滤波
             acc_[i] = acc_z1_[i] * a + b * (input_torque[i] / (mass[i]));
+            // 速度 = 基于位置差分的平滑速度 + 当期前馈加速度的积分效果
             velocity[i] = velocity_z1_[i] * a + b * (position[i] - position_z1_[i]) + acc_[i];
+            
+            // 更新状态
             position_z1_[i] = position[i];
             velocity_z1_[i] = velocity[i];
             acc_z1_[i] = acc_[i];

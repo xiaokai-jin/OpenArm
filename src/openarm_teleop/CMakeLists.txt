@@ -46,12 +46,15 @@ add_library(
   src/openarm_port/openarm_init.cpp src/openarm_port/joint_mapper.cpp)
 
 target_include_directories(openarm_teleop_lib
-                           PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+                           PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
+                                  /opt/ros/humble/include/kdl_parser
+                                  /opt/ros/humble/include/urdfdom
+                                  /opt/ros/humble/include/urdfdom_headers)
 
 target_link_libraries(
   openarm_teleop_lib
-  PUBLIC OpenArmCAN::openarm_can Eigen3::Eigen ${orocos_kdl_LIBRARIES}
-         ${kdl_parser_LIBRARIES} urdfdom::urdfdom_model yaml-cpp::yaml-cpp)
+  PUBLIC OpenArmCAN::openarm_can Eigen3::Eigen kdl_parser::kdl_parser orocos-kdl
+         urdfdom::urdfdom_model yaml-cpp::yaml-cpp)
 
 # -----------------------------
 # Executables
@@ -65,3 +68,7 @@ target_link_libraries(gravity_comp PRIVATE openarm_teleop_lib)
 target_link_libraries(comm_test PRIVATE openarm_teleop_lib)
 target_link_libraries(unilateral_control PRIVATE openarm_teleop_lib)
 target_link_libraries(bilateral_control PRIVATE openarm_teleop_lib)
+
+# Test standalone dynamics
+add_executable(test_dynamics control/test_dynamics.cpp)
+target_link_libraries(test_dynamics PRIVATE openarm_teleop_lib)

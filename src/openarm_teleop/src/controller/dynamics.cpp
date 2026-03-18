@@ -227,3 +227,21 @@ void Dynamics::GetPreEECordinate(const double *motor_position, Eigen::Matrix3d &
 
     p << kdl_frame.p[0], kdl_frame.p[1], kdl_frame.p[2];
 }
+
+void Dynamics::GetMassMatrix(const double *motor_position, Eigen::MatrixXd &mass_matrix) {
+    const size_t dof = kdl_chain.getNrOfJoints();
+    KDL::JntArray q_(dof);
+    KDL::JntSpaceInertiaMatrix inertia_mat(dof);
+    for (size_t i = 0; i < dof; i++) {
+        q_(i) = motor_position[i];
+    }
+
+    solver->JntToMass(q_, inertia_mat);
+
+    mass_matrix = Eigen::MatrixXd(dof, dof);
+    for (size_t i = 0; i < dof; i++) {
+        for (size_t j = 0; j < dof; j++) {
+            mass_matrix(i, j) = inertia_mat(i, j);
+        }
+    }
+}
