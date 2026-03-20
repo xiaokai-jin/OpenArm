@@ -72,3 +72,7 @@ target_link_libraries(bilateral_control PRIVATE openarm_teleop_lib)
 # Test standalone dynamics
 add_executable(test_dynamics control/test_dynamics.cpp)
 target_link_libraries(test_dynamics PRIVATE openarm_teleop_lib)
+
+# Workspace sampling and dexterity analysis
+add_executable(workspace_analyzer control/workspace_analyzer.cpp)
+target_link_libraries(workspace_analyzer PRIVATE openarm_teleop_lib)

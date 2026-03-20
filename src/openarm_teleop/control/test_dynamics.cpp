@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <controller/dynamics.hpp>
 #include <math.h>
+
 int main(int argc, char** argv) {
     // 1. 设置工作空间里的 URDF 路径 
     // 根据用户提供的双臂模型文件名称
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
     const int dof = 7; 
     
     // 2. 构造虚拟状态测试输入：当前各个关节的角度(rad)和角速度(rad/s)
-    std::vector<double> joint_positions  = {10.0*M_PI/180.0, -15.0*M_PI/180.0, 30.0*M_PI/180.0, 20.0*M_PI/180.0, 0.0, -20*M_PI/180.0, 30.0*M_PI/180.0};
+    std::vector<double> joint_positions  = {10.0*M_PI/180.0, -15.0*M_PI/180.0, -30.0*M_PI/180.0, 20.0*M_PI/180.0, 10.0*M_PI/180.0, -20*M_PI/180.0, 30.0*M_PI/180.0};
     std::vector<double> joint_velocities = {0.1, 0.2,  0.0, -0.1, 0.0,  0.1, 0.0};
 
     // 提前为输出数据分配内存
@@ -38,8 +39,7 @@ int main(int argc, char** argv) {
     std::vector<double> coriolis(dof, 0.0);
     Eigen::MatrixXd mass_matrix;
     
-    // 以下为之前保留的其它结果
-    std::vector<double> inertia_diag(dof, 0.0);
+    std::vector<double> inertia_diag(dof, 0.0); // 质量矩阵对角线元素
     Eigen::MatrixXd jacobian;
     Eigen::Matrix3d R;
     Eigen::Vector3d p;
@@ -57,11 +57,11 @@ int main(int argc, char** argv) {
     std::cout << "========================== 动力学三大矩阵与核心数据 ==========================" << std::endl;
     std::cout << std::fixed << std::setprecision(4);
     
-    std::cout << "\n[输入姿态] 各关节角度 (rad/q):        ";
-    for(int i = 0; i < dof; i++) std::cout << std::setw(8) << joint_positions[i] << " ";
+    std::cout << "\n[输入姿态] 各关节角度 (°/q):        ";
+    for(int i = 0; i < dof; i++) std::cout << std::setw(8) << joint_positions[i] * 180.0 / M_PI << " ";
     
-    std::cout << "\n[输入速度] 各关节角速度 (rad/s/q_dot):";
-    for(int i = 0; i < dof; i++) std::cout << std::setw(8) << joint_velocities[i] << " ";
+    std::cout << "\n[输入速度] 各关节角速度 (°/s/q_dot):";
+    for(int i = 0; i < dof; i++) std::cout << std::setw(8) << joint_velocities[i] * 180.0 / M_PI << " ";
     std::cout << "\n----------------------------------------------------------------------" << std::endl;
 
     std::cout << "\n1. 重力向心矩阵 (Gravity Vector) G(q) [" << dof << "x1] [Nm]:\n";

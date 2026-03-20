@@ -1,0 +1,5 @@
+frame,arm,workspace_type,samples,dex_manip_min,dex_cond_max,kin_base_link,ee_link,x_min_m,x_max_m,y_min_m,y_max_m,z_min_m,z_max_m
+world,left,reachable,300000,0.01,80,openarm_left_link0,openarm_left_hand_tcp,-0.609647,0.612721,-0.270595,0.769415,0.084711,1.310955
+world,left,dexterous,300000,0.01,80,openarm_left_link0,openarm_left_hand_tcp,-0.599953,0.604278,-0.270595,0.718825,0.093675,1.299538
+world,right,reachable,300000,0.01,80,openarm_right_link0,openarm_right_hand_tcp,-0.613895,0.610604,-0.769449,0.271658,0.085252,1.311428
+world,right,dexterous,300000,0.01,80,openarm_right_link0,openarm_right_hand_tcp,-0.605441,0.600380,-0.724799,0.271658,0.094537,1.300755
