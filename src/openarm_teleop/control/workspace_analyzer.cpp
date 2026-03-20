@@ -2,6 +2,10 @@
 // - 使用 Dynamics 类做 FK（GetEECordinate）和雅可比（GetJacobian）计算
 #include <controller/dynamics.hpp>
 
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
+
 // Eigen矩阵/向量与SVD：
 // - Eigen::MatrixXd / Matrix3d / Vector3d
 // - Eigen::JacobiSVD（通过 Dense 头引入）
@@ -14,6 +18,8 @@
 // 数学函数：
 // - std::isfinite / std::log / std::exp
 #include <cmath>
+
+#include <chrono>
 
 // 文件读URDF：
 // - std::ifstream
@@ -96,11 +102,41 @@ struct Config {
   std::string world_link = "world";
   std::string base_link = "openarm_left_link0";
   std::string end_link = "openarm_left_hand_tcp";
+  std::string reachable_topic = "/openarm/reachable_workspace_cloud";
+  std::string dexterous_topic = "/openarm/dexterous_workspace_cloud";
   size_t samples = 200000;
   double dex_manip_min = 0.01;
   double dex_cond_max = 80.0;
   uint32_t seed = 42;
 };
+
+sensor_msgs::msg::PointCloud2 BuildPointCloud2(const std::vector<Eigen::Vector3d>& points,
+                                               const std::string& frame_id,
+                                               const rclcpp::Time& stamp) {
+  sensor_msgs::msg::PointCloud2 cloud;
+  cloud.header.frame_id = frame_id;
+  cloud.header.stamp = stamp;
+
+  sensor_msgs::PointCloud2Modifier modifier(cloud);
+  modifier.setPointCloud2FieldsByString(1, "xyz");
+  modifier.resize(points.size());
+
+  sensor_msgs::PointCloud2Iterator<float> iter_x(cloud, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(cloud, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(cloud, "z");
+
+  for (const auto& p : points) {
+    *iter_x = static_cast<float>(p.x());
+    *iter_y = static_cast<float>(p.y());
+    *iter_z = static_cast<float>(p.z());
+    ++iter_x;
+    ++iter_y;
+    ++iter_z;
+  }
+
+  cloud.is_dense = true;
+  return cloud;
+}
 
 // 打印命令行帮助
 void PrintUsage(const char* prog) {
@@ -108,12 +144,15 @@ void PrintUsage(const char* prog) {
       << "Usage:\n"
       << "  " << prog
       << " [--urdf <path>] [--world-link <name>] [--base-link <name>] [--end-link <name>]\\n"
+      << "     [--reachable-topic <name>] [--dexterous-topic <name>]\n"
       << "     [--samples <int>] [--dex-manip-min <double>] [--dex-cond-max <double>]\\n"
       << "     [--seed <int>]\\n\\n"
       << "Example:\n"
       << "  " << prog
       << " --urdf /home/xiaokai/OpenArm/openarm_bimanual.urdf --world-link world "
-      << "--base-link openarm_left_link0 --end-link openarm_left_hand_tcp --samples 300000\\n";
+      << "--base-link openarm_left_link0 --end-link openarm_left_hand_tcp --samples 300000 "
+      << "--reachable-topic /openarm/reachable_workspace_cloud "
+      << "--dexterous-topic /openarm/dexterous_workspace_cloud\n";
 }
 
 // 解析命令行参数
@@ -144,6 +183,12 @@ bool ParseArgs(int argc, char** argv, Config& cfg) {
     } else if (arg == "--end-link") {
       if (!need_value(arg)) return false;
       cfg.end_link = argv[++i];
+    } else if (arg == "--reachable-topic") {
+      if (!need_value(arg)) return false;
+      cfg.reachable_topic = argv[++i];
+    } else if (arg == "--dexterous-topic") {
+      if (!need_value(arg)) return false;
+      cfg.dexterous_topic = argv[++i];
     } else if (arg == "--samples") {
       if (!need_value(arg)) return false;
       cfg.samples = static_cast<size_t>(std::stoull(argv[++i]));
@@ -264,10 +309,19 @@ bool LoadJointBounds(const std::string& urdf_path, const std::string& base_link,
 }
 
 int main(int argc, char** argv) {
+  rclcpp::init(argc, argv);
+
   Config cfg;
   if (!ParseArgs(argc, argv, cfg)) {
+    rclcpp::shutdown();
     return (argc > 1 ? 1 : 0);
   }
+
+  auto node = std::make_shared<rclcpp::Node>("workspace_analyzer");
+  auto reachable_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>(
+      cfg.reachable_topic, rclcpp::QoS(1).transient_local().reliable());
+  auto dexterous_pub = node->create_publisher<sensor_msgs::msg::PointCloud2>(
+      cfg.dexterous_topic, rclcpp::QoS(1).transient_local().reliable());
 
   std::vector<JointBound> bounds;
   std::vector<std::string> chain_joint_names;
@@ -282,6 +336,8 @@ int main(int argc, char** argv) {
   std::cout << "[INFO] Dexterity  : manipulability >= " << cfg.dex_manip_min
             << ", condition number <= " << cfg.dex_cond_max << std::endl;
   std::cout << "[INFO] Joint DOF  : " << bounds.size() << std::endl;
+  std::cout << "[INFO] Topic Reach: " << cfg.reachable_topic << std::endl;
+  std::cout << "[INFO] Topic Dext : " << cfg.dexterous_topic << std::endl;
 
   // 这里分两个Dynamics求解器，目的是“物理解耦”：
   // 1) dyn_kin: base_link->end_link
@@ -314,6 +370,10 @@ int main(int argc, char** argv) {
 
   Range3D reachable_range;
   Range3D dexterous_range;
+  std::vector<Eigen::Vector3d> reachable_points;
+  std::vector<Eigen::Vector3d> dexterous_points;
+  reachable_points.reserve(cfg.samples);
+  dexterous_points.reserve(cfg.samples);
 
   size_t reachable_count = 0;
   size_t dexterous_count = 0;
@@ -336,6 +396,7 @@ int main(int argc, char** argv) {
 
     // 采样点可求得有效FK，即计入可达空间统计
     reachable_range.update(p);
+    reachable_points.push_back(p);
     ++reachable_count;
 
     // Step 3) 用base->ee链计算雅可比（用于灵巧性判定）
@@ -378,6 +439,7 @@ int main(int argc, char** argv) {
     // - condition number足够小（避免病态方向放大）
     if (manipulability >= cfg.dex_manip_min && cond <= cfg.dex_cond_max) {
       dexterous_range.update(p);
+      dexterous_points.push_back(p);
       ++dexterous_count;
     }
   }
@@ -405,6 +467,34 @@ int main(int argc, char** argv) {
   }
 
   std::cout << "===============================================================\n";
+
+  const auto stamp = node->get_clock()->now();
+  auto reachable_cloud = BuildPointCloud2(reachable_points, cfg.world_link, stamp);
+  auto dexterous_cloud = BuildPointCloud2(dexterous_points, cfg.world_link, stamp);
+
+  reachable_pub->publish(reachable_cloud);
+  dexterous_pub->publish(dexterous_cloud);
+
+  RCLCPP_INFO(node->get_logger(), "Published reachable cloud: %zu points",
+              reachable_points.size());
+  RCLCPP_INFO(node->get_logger(), "Published dexterous cloud: %zu points",
+              dexterous_points.size());
+  RCLCPP_INFO(node->get_logger(),
+              "Use RViz2 fixed frame '%s' and display topics '%s' / '%s'",
+              cfg.world_link.c_str(), cfg.reachable_topic.c_str(), cfg.dexterous_topic.c_str());
+
+  rclcpp::WallRate loop_rate(1.0);
+  while (rclcpp::ok()) {
+    const auto now = node->get_clock()->now();
+    reachable_cloud.header.stamp = now;
+    dexterous_cloud.header.stamp = now;
+    reachable_pub->publish(reachable_cloud);
+    dexterous_pub->publish(dexterous_cloud);
+    rclcpp::spin_some(node);
+    loop_rate.sleep();
+  }
+
+  rclcpp::shutdown();
 
   return 0;
 }

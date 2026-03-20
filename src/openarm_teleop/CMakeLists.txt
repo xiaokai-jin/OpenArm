@@ -33,6 +33,8 @@ find_package(Eigen3 REQUIRED)
 find_package(urdfdom REQUIRED)
 find_package(urdfdom_headers REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
 if(NOT TARGET yaml-cpp::yaml-cpp AND TARGET yaml-cpp)
   add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
 endif()
@@ -75,4 +77,5 @@ target_link_libraries(test_dynamics PRIVATE openarm_teleop_lib)
 
 # Workspace sampling and dexterity analysis
 add_executable(workspace_analyzer control/workspace_analyzer.cpp)
-target_link_libraries(workspace_analyzer PRIVATE openarm_teleop_lib)
+target_link_libraries(workspace_analyzer PRIVATE openarm_teleop_lib rclcpp::rclcpp
+                                               sensor_msgs::sensor_msgs__rosidl_typesupport_cpp)
