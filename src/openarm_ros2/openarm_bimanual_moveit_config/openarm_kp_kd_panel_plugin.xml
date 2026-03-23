@@ -1,0 +1,10 @@
+<library path="openarm_kp_kd_panel">
+  <class
+    name="openarm_bimanual_moveit_config/KpKdPanel"
+    type="openarm_bimanual_moveit_config::KpKdPanel"
+    base_class_type="rviz_common::Panel">
+    <description>
+      RViz panel for tuning Kp/Kd values for OpenArm. Values are mirrored to left/right arms.
+    </description>
+  </class>
+</library>

@@ -16,6 +16,35 @@ cmake_minimum_required(VERSION 3.22)
 project(openarm_bimanual_moveit_config)
 
 find_package(ament_cmake REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(rviz_common REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Widgets)
+
+set(CMAKE_AUTOMOC ON)
+
+add_library(openarm_kp_kd_panel SHARED
+  src/kp_kd_panel.cpp
+)
+
+target_include_directories(openarm_kp_kd_panel PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(openarm_kp_kd_panel
+  Qt5::Widgets
+)
+
+ament_target_dependencies(openarm_kp_kd_panel
+  pluginlib
+  rclcpp
+  rviz_common
+  std_msgs
+)
+
+pluginlib_export_plugin_description_file(rviz_common openarm_kp_kd_panel_plugin.xml)
 
 ament_package()
 
@@ -28,3 +57,11 @@ endif()
 
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 install(FILES .setup_assistant DESTINATION share/${PROJECT_NAME})
+install(FILES openarm_kp_kd_panel_plugin.xml DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY include/ DESTINATION include)
+install(TARGETS openarm_kp_kd_panel
+  EXPORT export_openarm_kp_kd_panel
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
