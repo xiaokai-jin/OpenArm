@@ -277,19 +277,23 @@ hardware_interface::return_type OpenArmHW::write(
 
   // 机械臂关节写入：位置跳变保护 + MIT 命令下发
   for (size_t i = 0; i < ARM_DOF; ++i) {
-    if (std::abs(pos_commands_[i] - pos_states_[i]) > POS_JUMP_TOLERANCE_RAD) {
-      RCLCPP_ERROR(rclcpp::get_logger("OpenArmHW"),
-                   "Position jump detected for joint %s: %f -> %f",
-                   info_.joints[i].name.c_str(), pos_states_[i],
-                   pos_commands_[i]);
-      return hardware_interface::return_type::ERROR;
+    double target_position = pos_commands_[i];
+    const double position_diff = pos_commands_[i] - pos_states_[i];
+    if (std::abs(position_diff) > POS_JUMP_TOLERANCE_RAD) {
+      target_position = pos_states_[i] +
+                        (position_diff > 0.0 ? POS_JUMP_TOLERANCE_RAD
+                                             : -POS_JUMP_TOLERANCE_RAD);
+      RCLCPP_WARN(rclcpp::get_logger("OpenArmHW"),
+                  "Position jump limited for joint %s: cmd=%f state=%f limited_cmd=%f",
+                  info_.joints[i].name.c_str(), pos_commands_[i],
+                  pos_states_[i], target_position);
     }
 
     // 关键控制下发点：
     // 若要改底层控制策略，通常优先在上层控制器改写 pos/vel/tau/kp/kd 的生成逻辑；
     // 若要改“发给驱动器的控制模式/映射”，可在此处替换 controlMIT 调用。
     motor_control_->controlMIT(*motors_[i], kp_commands_[i], kd_commands_[i],
-                               pos_commands_[i], vel_commands_[i],
+                               target_position, vel_commands_[i],
                                tau_ff_commands_[i]);
   }
 

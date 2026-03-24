@@ -53,20 +53,21 @@ static const std::size_t GRIPPER_DOF = 1;
 // 总自由度（机械臂 + 夹爪）
 static const std::size_t TOTAL_DOF = ARM_DOF + GRIPPER_DOF;
 // 默认关节刚度（KP），作为命令接口初始值
-static const std::array<double, TOTAL_DOF> DEFAULT_KP = {80.0, 80.0, 20.0, 55.0,
-                                                 5.0,  5.0,  5.0,  0.5};
+static const std::array<double, TOTAL_DOF> DEFAULT_KP = {80.0, 80.0, 50.0, 55.0,
+                                                 5.0,  5.0,  5.0,  8.0};
 // 默认关节阻尼（KD），作为命令接口初始值
 static const std::array<double, TOTAL_DOF> DEFAULT_KD = {2.75, 2.5, 0.7, 0.4,
-                                                 0.7,  0.6, 0.5, 0.1};
+                                                 0.7,  0.6, 0.5, 1.2};
 // 激活阶段允许的“初始位置误差”阈值（弧度）
 static const double START_POS_TOLERANCE_RAD = 0.1;
 // 运行阶段允许的单次位置跳变阈值（弧度）
-static const double POS_JUMP_TOLERANCE_RAD = 3.1415 / 16.0;
+static const double POS_JUMP_TOLERANCE_RAD = 3.1415 / 10.0;
 
 // 是否启用夹爪硬件映射
 static const bool USING_GRIPPER = true;
 // 夹爪电机角度与线性开合量之间的参考半径（米）
-static const double GRIPPER_REFERENCE_GEAR_RADIUS_M = 0.00853;
+// static const double GRIPPER_REFERENCE_GEAR_RADIUS_M = 0.00853;
+static const double GRIPPER_REFERENCE_GEAR_RADIUS_M = 0.037532;
 // 夹爪传动方向修正系数（-1 或 1）
 static const double GRIPPER_GEAR_DIRECTION_MULTIPLIER = 1.0;
 // 夹爪在状态/命令数组中的索引
