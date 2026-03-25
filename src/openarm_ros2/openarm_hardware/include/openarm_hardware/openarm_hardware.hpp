@@ -37,7 +37,7 @@ namespace openarm_hardware {
 // -----------------------------
 // 机械臂 7 个关节的默认电机型号（与实际关节一一对应）
 std::vector<DM_Motor_Type> motor_types{
-    DM_Motor_Type::DM4340, DM_Motor_Type::DM4340, DM_Motor_Type::DM4340,
+    DM_Motor_Type::DM8009, DM_Motor_Type::DM8009, DM_Motor_Type::DM4340,
     DM_Motor_Type::DM4340, DM_Motor_Type::DM4310, DM_Motor_Type::DM4310,
     DM_Motor_Type::DM4310};
 // 每个关节电机在 CAN 总线上的 device id
@@ -53,11 +53,20 @@ static const std::size_t GRIPPER_DOF = 1;
 // 总自由度（机械臂 + 夹爪）
 static const std::size_t TOTAL_DOF = ARM_DOF + GRIPPER_DOF;
 // 默认关节刚度（KP），作为命令接口初始值
-static const std::array<double, TOTAL_DOF> DEFAULT_KP = {80.0, 80.0, 50.0, 55.0,
-                                                 5.0,  5.0,  5.0,  8.0};
+static const std::array<double, TOTAL_DOF> DEFAULT_KP = {400.0, 400.0, 150.0, 250.0,
+                                                 100.0,  100.0,  100.0,  8.0};
+
 // 默认关节阻尼（KD），作为命令接口初始值
-static const std::array<double, TOTAL_DOF> DEFAULT_KD = {2.75, 2.5, 0.7, 0.4,
-                                                 0.7,  0.6, 0.5, 1.2};
+static const std::array<double, TOTAL_DOF> DEFAULT_KD = {4.0, 4.0, 2.0, 2.5,
+                                                 1.5,  1.5, 1.5, 1.2};
+
+// // 默认关节刚度（KP），作为命令接口初始值
+// static const std::array<double, TOTAL_DOF> DEFAULT_KP = {200.0, 200.0, 150.0, 55.0,
+//                                                  5.0,  5.0,  5.0,  8.0};
+                                                 
+// // 默认关节阻尼（KD），作为命令接口初始值
+// static const std::array<double, TOTAL_DOF> DEFAULT_KD = {3, 3, 2.0, 0.4,
+//                                                  0.7,  0.6, 0.5, 1.2};
 // 激活阶段允许的“初始位置误差”阈值（弧度）
 static const double START_POS_TOLERANCE_RAD = 0.1;
 // 运行阶段允许的单次位置跳变阈值（弧度）

@@ -50,9 +50,9 @@ class KpKdPanel : public rviz_common::Panel {
   static constexpr int kKpScale = 10;     // 0.1 granularity
   static constexpr int kKdScale = 100;    // 0.01 granularity
   static constexpr int kKpMin = 0;
-  static constexpr int kKpMax = 2000;     // 0 ~ 200.0
+  static constexpr int kKpMax = 5000;     // 0 ~ 500.0
   static constexpr int kKdMin = 0;
-  static constexpr int kKdMax = 1000;     // 0 ~ 10.0
+  static constexpr int kKdMax = 500;     // 0 ~ 5.0
 };
 
 }  // namespace openarm_bimanual_moveit_config
