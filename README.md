@@ -145,3 +145,31 @@ graph TD
 
 ---
 **探索物理 AI 的未来，从 OpenArm 开始。**
+
+---
+
+## ✅ 新增：MoveIt 重力补偿前馈流程（双臂）
+
+当前仓库已完成双臂重力补偿前馈接入 ROS2 控制链路，核心逻辑如下：
+
+1. MoveIt 负责轨迹规划与执行（主控制）
+2. stiffness/damping 控制器提供 kp/kd（主导）
+3. 重力补偿节点基于 URDF + KDL 实时计算 tau_g(q)
+4. 通过左右臂 effort 前馈控制器下发 tau_ff（辅助）
+
+推荐启动命令：
+
+```bash
+source /opt/ros/humble/setup.bash
+cd ~/OpenArm
+source install/setup.bash
+ros2 launch openarm_bimanual_moveit_config demo.launch.py use_gravity_compensation:=true
+```
+
+快速检查：
+
+```bash
+ros2 node list | grep gravity_compensation_node
+ros2 topic hz /left_gravity_compensation_controller/commands
+ros2 topic hz /right_gravity_compensation_controller/commands
+```

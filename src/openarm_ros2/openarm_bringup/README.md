@@ -30,3 +30,18 @@ ros2 launch openarm_bringup openarm.launch.py arm_type:=v10 use_fake_hardware:=t
 - Robot controller (joint trajectory or forward position)
 - Gripper controller
 - RViz2 visualization
+
+## Bimanual gravity compensation (optional)
+
+The bimanual launch now supports gravity feedforward controllers and gravity node.
+
+```bash
+ros2 launch openarm_bringup openarm.bimanual.launch.py use_gravity_compensation:=true
+```
+
+Quick checks:
+
+```bash
+ros2 node list | grep gravity_compensation_node
+ros2 control list_controllers | grep gravity_compensation
+```

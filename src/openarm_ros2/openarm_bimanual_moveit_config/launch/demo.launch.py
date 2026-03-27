@@ -8,6 +8,7 @@ from launch.actions import (
     TimerAction,
     OpaqueFunction,
 )
+from launch.conditions import IfCondition
 from launch.substitutions import (
     LaunchConfiguration,
     PathJoinSubstitution,
@@ -195,6 +196,13 @@ def generate_launch_description():
             default_value="openarm_v10_bimanual_controllers.yaml",
         ),
         DeclareLaunchArgument("hand", default_value="true"),
+        DeclareLaunchArgument("use_gravity_compensation", default_value="true"),
+        DeclareLaunchArgument(
+            "gravity_compensation_params_file",
+            default_value=PathJoinSubstitution(
+                [FindPackageShare("openarm_gravity_compensation"), "config", "gravity_compensation.yaml"]
+            ),
+        ),
     ]
 
     description_package = LaunchConfiguration("description_package")
@@ -209,6 +217,8 @@ def generate_launch_description():
     left_can_interface = LaunchConfiguration("left_can_interface")
     arm_prefix = LaunchConfiguration("arm_prefix")
     hand = LaunchConfiguration("hand")
+    use_gravity_compensation = LaunchConfiguration("use_gravity_compensation")
+    gravity_compensation_params_file = LaunchConfiguration("gravity_compensation_params_file")
 
     controllers_file = PathJoinSubstitution(
         [FindPackageShare(runtime_config_package), "config",
@@ -273,6 +283,20 @@ def generate_launch_description():
         arguments=["damping_controller", "-c", "/controller_manager"],
     )
 
+    left_gravity_ff_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["left_gravity_compensation_controller", "-c", "/controller_manager"],
+        condition=IfCondition(use_gravity_compensation),
+    )
+
+    right_gravity_ff_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        arguments=["right_gravity_compensation_controller", "-c", "/controller_manager"],
+        condition=IfCondition(use_gravity_compensation),
+    )
+
     delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
     delayed_arm_ctrl = TimerAction(
         period=1.0, actions=[controller_spawner_func])
@@ -280,6 +304,17 @@ def generate_launch_description():
     delayed_gripper_right = TimerAction(period=3.5, actions=[right_gripper_spawner])
     delayed_stiffness = TimerAction(period=4.0, actions=[stiffness_spawner])
     delayed_damping = TimerAction(period=4.5, actions=[damping_spawner])
+    delayed_left_gravity_ff = TimerAction(period=5.0, actions=[left_gravity_ff_spawner])
+    delayed_right_gravity_ff = TimerAction(period=5.5, actions=[right_gravity_ff_spawner])
+
+    gravity_compensation_node = Node(
+        package="openarm_gravity_compensation",
+        executable="gravity_compensation_node",
+        name="gravity_compensation_node",
+        output="screen",
+        parameters=[gravity_compensation_params_file],
+        condition=IfCondition(use_gravity_compensation),
+    )
 
     moveit_config = MoveItConfigsBuilder(
         "openarm", package_name="openarm_bimanual_moveit_config"
@@ -333,6 +368,9 @@ def generate_launch_description():
             delayed_gripper_right,
             delayed_stiffness,
             delayed_damping,
+            delayed_left_gravity_ff,
+            delayed_right_gravity_ff,
+            gravity_compensation_node,
             run_move_group_node,
             rviz_node,
         ]

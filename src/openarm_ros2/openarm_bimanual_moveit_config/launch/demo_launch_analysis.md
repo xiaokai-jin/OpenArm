@@ -220,3 +220,29 @@ def generate_launch_description():
 ```
 **作用语法与API解析**：
 * 汇总一切！把所有的参数声明（`declared_arguments`）、包装好的函数、节点（Node）都塞进 `LaunchDescription` 列表内返回。ROS 2 Launch 引擎将接管并并发拉起这个列表中的所有对象。
+
+---
+
+## 6. 新增：重力补偿前馈接入说明
+
+当前 `demo.launch.py` 已接入重力补偿前馈链路：
+
+1. 声明了 `use_gravity_compensation` 开关参数（默认 true）
+2. 声明了 `gravity_compensation_params_file` 参数文件路径
+3. 启动 `left_gravity_compensation_controller` 与 `right_gravity_compensation_controller`
+4. 启动 `gravity_compensation_node`，发布左右臂 effort 前馈命令
+
+### 运行时验证建议
+
+```bash
+ros2 node list | grep gravity_compensation_node
+ros2 control list_controllers | grep gravity_compensation
+ros2 topic hz /left_gravity_compensation_controller/commands
+ros2 topic hz /right_gravity_compensation_controller/commands
+```
+
+### 常见问题
+
+- 如果控制器已 active 但 commands 没有频率，优先检查重力节点是否崩溃。
+- 如果点击执行时先下坠，通常是前馈比例偏低或执行阶段前馈中断。
+- 如果手动拖动时“很硬”，通常是轨迹控制器 + 高 kp/kd 在保持位姿，不是重力补偿本身异常。

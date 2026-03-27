@@ -20,6 +20,7 @@ from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription, LaunchContext
 from launch.actions import DeclareLaunchArgument, RegisterEventHandler, TimerAction, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.event_handlers import OnProcessExit
 from launch.substitutions import (
     LaunchConfiguration,
@@ -132,6 +133,20 @@ def controller_spawner(context: LaunchContext, robot_controller, arm_prefix):
     return [robot_controller_spawner]
 
 
+def gravity_ff_controller_spawner(context: LaunchContext, arm_prefix):
+    namespace = namespace_from_context(context, arm_prefix)
+    controller_manager_ref = f"/{namespace}/controller_manager" if namespace else "/controller_manager"
+
+    gravity_ff_spawner = Node(
+        package="controller_manager",
+        executable="spawner",
+        namespace=namespace,
+        arguments=["left_gravity_compensation_controller",
+                   "right_gravity_compensation_controller", "-c", controller_manager_ref],
+    )
+    return [gravity_ff_spawner]
+
+
 def generate_launch_description():
     """Generate launch description for OpenArm bimanual configuration."""
 
@@ -189,6 +204,18 @@ def generate_launch_description():
             default_value="openarm_v10_bimanual_controllers.yaml",
             description="Controllers file(s) to use. Can be a single file or comma-separated list of files.",
         ),
+        DeclareLaunchArgument(
+            "use_gravity_compensation",
+            default_value="true",
+            description="Whether to start gravity feedforward controllers and node.",
+        ),
+        DeclareLaunchArgument(
+            "gravity_compensation_params_file",
+            default_value=PathJoinSubstitution(
+                [FindPackageShare("openarm_gravity_compensation"), "config", "gravity_compensation.yaml"]
+            ),
+            description="Gravity compensation node parameter file.",
+        ),
     ]
 
     # Initialize launch configurations
@@ -202,6 +229,8 @@ def generate_launch_description():
     rightcan_interface = LaunchConfiguration("right_can_interface")
     left_can_interface = LaunchConfiguration("left_can_interface")
     arm_prefix = LaunchConfiguration("arm_prefix")
+    use_gravity_compensation = LaunchConfiguration("use_gravity_compensation")
+    gravity_compensation_params_file = LaunchConfiguration("gravity_compensation_params_file")
 
     controllers_file = PathJoinSubstitution(
         [FindPackageShare(runtime_config_package), "config",
@@ -256,6 +285,20 @@ def generate_launch_description():
         )]
     )
 
+    gravity_ff_controller_spawner_func = OpaqueFunction(
+        function=gravity_ff_controller_spawner,
+        args=[arm_prefix]
+    )
+
+    gravity_compensation_node = Node(
+        package="openarm_gravity_compensation",
+        executable="gravity_compensation_node",
+        name="gravity_compensation_node",
+        output="screen",
+        parameters=[gravity_compensation_params_file],
+        condition=IfCondition(use_gravity_compensation),
+    )
+
     # Timing and sequencing
     LAUNCH_DELAY_SECONDS = 1.0
     delayed_joint_state_broadcaster = TimerAction(
@@ -272,6 +315,12 @@ def generate_launch_description():
         actions=[gripper_controller_spawner],
     )
 
+    delayed_gravity_ff_controller = TimerAction(
+        period=LAUNCH_DELAY_SECONDS,
+        actions=[gravity_ff_controller_spawner_func],
+        condition=IfCondition(use_gravity_compensation),
+    )
+
     return LaunchDescription(
         declared_arguments + [
             robot_nodes_spawner_func,
@@ -281,5 +330,7 @@ def generate_launch_description():
             delayed_joint_state_broadcaster,
             delayed_robot_controller,
             delayed_gripper_controller,
+            delayed_gravity_ff_controller,
+            gravity_compensation_node,
         ]
     )

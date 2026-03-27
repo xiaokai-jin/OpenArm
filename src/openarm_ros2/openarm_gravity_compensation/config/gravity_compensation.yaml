@@ -1,0 +1,35 @@
+gravity_compensation_node:
+  ros__parameters:
+    publish_rate_hz: 200.0
+    log_period_sec: 5.0
+    robot_description_source_node: /robot_state_publisher
+
+    left_arm:
+      enabled: true
+      alpha: 0.9
+      root_link: openarm_body_link0
+      leaf_link: openarm_left_hand
+      joint_names:
+        - openarm_left_joint1
+        - openarm_left_joint2
+        - openarm_left_joint3
+        - openarm_left_joint4
+        - openarm_left_joint5
+        - openarm_left_joint6
+        - openarm_left_joint7
+      command_topic: /left_gravity_compensation_controller/commands
+
+    right_arm:
+      enabled: true
+      alpha: 0.9
+      root_link: openarm_body_link0
+      leaf_link: openarm_right_hand
+      joint_names:
+        - openarm_right_joint1
+        - openarm_right_joint2
+        - openarm_right_joint3
+        - openarm_right_joint4
+        - openarm_right_joint5
+        - openarm_right_joint6
+        - openarm_right_joint7
+      command_topic: /right_gravity_compensation_controller/commands

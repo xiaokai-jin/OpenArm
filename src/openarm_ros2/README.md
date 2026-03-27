@@ -80,6 +80,42 @@ source install/setup.bash
 ros2 launch openarm_bimanual_moveit_config demo.launch.py
 ```
 
+---
+
+## Gravity compensation feedforward (MoveIt + ros2_control)
+
+This workspace now supports gravity feedforward for both arms while keeping trajectory control and stiffness/damping control active.
+
+### Control architecture
+
+- Main control: trajectory controller (position command)
+- Main impedance: stiffness_controller / damping_controller
+- Feedforward assist: left/right gravity compensation effort controllers
+
+The effective command at hardware layer is still MIT style (kp/kd + trajectory target + tau_ff).
+
+### Startup command
+
+```sh
+source /opt/ros/humble/setup.bash
+cd ~/OpenArm
+colcon build --packages-select openarm_gravity_compensation openarm_bimanual_moveit_config openarm_bringup
+source install/setup.bash
+
+ros2 launch openarm_bimanual_moveit_config demo.launch.py use_gravity_compensation:=true
+```
+
+### Runtime checks
+
+```sh
+ros2 node list | grep gravity_compensation_node
+ros2 control list_controllers | grep gravity_compensation
+ros2 topic hz /left_gravity_compensation_controller/commands
+ros2 topic hz /right_gravity_compensation_controller/commands
+```
+
+If controller is active but command topic has no frequency, check launch log for gravity node crash first.
+
 
 ## ROS2 Jazzy patch
 
