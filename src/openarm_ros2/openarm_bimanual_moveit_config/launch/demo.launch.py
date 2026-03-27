@@ -17,6 +17,13 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from moveit_configs_utils import MoveItConfigsBuilder
 
+# 这个 launch 文件是“单文件一体化 bringup”：
+# - 渲染 xacro
+# - 启动 robot_state_publisher + ros2_control_node
+# - 启动各类 controller spawner
+# - 启动 move_group + rviz2
+# - （新增）按条件启动重力补偿前馈控制器与重力节点
+
 
 def generate_robot_description(
     context: LaunchContext,
@@ -31,6 +38,8 @@ def generate_robot_description(
     hand,
 ):
     """Render Xacro and return XML string."""
+    # LaunchConfiguration 在这里还是 substitution 对象，
+    # 必须通过 context.perform_substitution(...) 转成真实字符串。
     description_package_str = context.perform_substitution(description_package)
     description_file_str = context.perform_substitution(description_file)
     arm_type_str = context.perform_substitution(arm_type)
@@ -63,6 +72,8 @@ def generate_robot_description(
         },
     ).toprettyxml(indent="  ")
 
+    # 返回完整 URDF XML 文本（后续作为 robot_description 参数下发给多个节点）
+
     return robot_description
 
 
@@ -79,6 +90,7 @@ def robot_nodes_spawner(
     arm_prefix,
     hand,
 ):
+    # 先根据启动参数渲染机器人描述
     robot_description = generate_robot_description(
         context,
         description_package,
@@ -107,6 +119,7 @@ def robot_nodes_spawner(
         package="controller_manager",
         executable="ros2_control_node",
         output="both",
+        # 同时传 robot_description 与 controllers yaml
         parameters=[robot_description_param, controllers_file_str],
     )
 
@@ -133,6 +146,7 @@ def robot_nodes_spawner(
 #         )
 #     ]
 def controller_spawner(context: LaunchContext, robot_controller):
+    # 根据 robot_controller 参数选择左右臂主控制器名称
     robot_controller_str = context.perform_substitution(robot_controller)
 
     if robot_controller_str == "forward_position_controller":
@@ -144,6 +158,8 @@ def controller_spawner(context: LaunchContext, robot_controller):
     else:
         raise ValueError(f"Unknown robot_controller: {robot_controller_str}")
 
+    # 这里使用 lambda + OpaqueFunction 包装 Node，
+    # 目的是按 TimerAction 延迟启动，降低 controller_manager 尚未就绪导致的失败概率。
     left_spawner_func = lambda context: [
         Node(
             package="controller_manager",
@@ -160,6 +176,9 @@ def controller_spawner(context: LaunchContext, robot_controller):
              arguments=[right, "-c", "/controller_manager"],
             )
         ]
+
+    # TimerAction 负责“启动时序编排”：
+    # 先起左，再起右，减少并发加载引起的抖动。
     delayed_left_spawner = TimerAction(period=1.5, actions=[OpaqueFunction(function=left_spawner_func)])
     delayed_right_spawner = TimerAction(period=2.0, actions=[OpaqueFunction(function=right_spawner_func)])
     return [
@@ -167,6 +186,9 @@ def controller_spawner(context: LaunchContext, robot_controller):
         delayed_right_spawner]
 
 def generate_launch_description():
+    # -----------------------------
+    # 1) 声明可配置参数
+    # -----------------------------
     declared_arguments = [
         DeclareLaunchArgument(
             "description_package",
@@ -196,7 +218,11 @@ def generate_launch_description():
             default_value="openarm_v10_bimanual_controllers.yaml",
         ),
         DeclareLaunchArgument("hand", default_value="true"),
+
+        # 新增：重力补偿总开关（false 时不启动重力相关节点与控制器）
         DeclareLaunchArgument("use_gravity_compensation", default_value="true"),
+
+        # 新增：重力节点参数文件
         DeclareLaunchArgument(
             "gravity_compensation_params_file",
             default_value=PathJoinSubstitution(
@@ -220,6 +246,8 @@ def generate_launch_description():
     use_gravity_compensation = LaunchConfiguration("use_gravity_compensation")
     gravity_compensation_params_file = LaunchConfiguration("gravity_compensation_params_file")
 
+    # PathJoinSubstitution + FindPackageShare 是 launch 场景下推荐的路径拼接方式
+    # （不同于 Python 直接 os.path.join，这里可延迟到运行时解析）。
     controllers_file = PathJoinSubstitution(
         [FindPackageShare(runtime_config_package), "config",
          "v10_controllers", controllers_file]
@@ -283,6 +311,9 @@ def generate_launch_description():
         arguments=["damping_controller", "-c", "/controller_manager"],
     )
 
+    # 新增：左右臂重力前馈 effort 控制器。
+    # IfCondition(...) 语法说明：
+    # - 当 launch 参数 use_gravity_compensation 为 true 时才实例化并执行该 action。
     left_gravity_ff_spawner = Node(
         package="controller_manager",
         executable="spawner",
@@ -297,6 +328,8 @@ def generate_launch_description():
         condition=IfCondition(use_gravity_compensation),
     )
 
+    # 以下 TimerAction 用于控制启动顺序：
+    # 先底层 state/controller，再上层重力前馈，避免“话题在发但控制器未激活”的窗口期。
     delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
     delayed_arm_ctrl = TimerAction(
         period=1.0, actions=[controller_spawner_func])
@@ -307,6 +340,8 @@ def generate_launch_description():
     delayed_left_gravity_ff = TimerAction(period=5.0, actions=[left_gravity_ff_spawner])
     delayed_right_gravity_ff = TimerAction(period=5.5, actions=[right_gravity_ff_spawner])
 
+    # 新增：重力补偿节点本体。
+    # 该节点输出 tau_ff 到左右 effort forward controller。
     gravity_compensation_node = Node(
         package="openarm_gravity_compensation",
         executable="gravity_compensation_node",
@@ -358,6 +393,8 @@ def generate_launch_description():
         parameters=[moveit_params],
     )
 
+    # LaunchDescription 按声明顺序提交 action；
+    # 实际执行时会并发处理，但受 TimerAction/Condition 约束。
     return LaunchDescription(
         declared_arguments
         + [
