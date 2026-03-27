@@ -74,6 +74,18 @@ int main(int argc, char ** argv)
   // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   //
   // 让我们设置一个关节空间目标并向其移动。这将替换我们上面设置的姿态目标。
+  moveit::core::RobotStatePtr current_state = move_group_right_side.getCurrentState(5); // 获取当前状态
+  // 接下来获取该组的当前关节值集。
+  std::vector<double> joint_group_positions;
+  current_state->copyJointGroupPositions(joint_model_group_right_side, joint_group_positions); // 复制关节组位置
+  // 现在，让我们修改其中一个关节，规划到新的关节空间目标，并可视化计划。
+  joint_group_positions[0] = -1.0; // 弧度
+  bool within_bounds=move_group_right_side.setJointValueTarget(joint_group_positions); // 设置关节空间目标
+  if (!within_bounds)
+  {
+    RCLCPP_WARN(LOGGER, "The joint space goal is not within bounds. Planning will likely fail.");
+  }
+  success = (move_group_right_side.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS); // 规划并检查是否成功
   
   rclcpp::shutdown();
   return 0;

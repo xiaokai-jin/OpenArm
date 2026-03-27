@@ -67,7 +67,10 @@ int main(int argc, char** argv) {
         std::cout << "CAN interface  : " << can_interface << std::endl;
         std::cout << "URDF path      : " << urdf_path << std::endl;
 
-        std::string root_link = "openarm_body_link0";
+        const double gravity_scale = 0.9; // Scale factor for gravity compensation torques
+        std::cout << "Gravity scale  : " << gravity_scale << std::endl;
+
+        std::string root_link = "openarm_body_link0"; 
         std::string leaf_link =
             (arm_side == "left_arm") ? "openarm_left_hand" : "openarm_right_hand";
 
@@ -81,6 +84,7 @@ int main(int argc, char** argv) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         auto start_time = std::chrono::high_resolution_clock::now();
         auto last_hz_display = start_time;
+        auto last_torque_display = start_time;
         int frame_count = 0;
 
         std::vector<double> arm_joint_positions(openarm->get_arm().get_motors().size(), 0.0);
@@ -118,15 +122,31 @@ int main(int argc, char** argv) {
 
             arm_dynamics.GetGravity(arm_joint_positions.data(), grav_torques.data());
 
-            for (size_t i = 0; i < openarm->get_arm().get_motors().size(); ++i) {
-                // std::cout << "grav_torques[" << i << "] = " << grav_torques[i] << std::endl;
+            auto time_since_last_torque_display =
+                std::chrono::duration_cast<std::chrono::milliseconds>(current_time -
+                                                                       last_torque_display)
+                    .count();
+            if (time_since_last_torque_display >= 5000) {  // Every 5000ms (5 seconds)
+                std::cout << "=== Gravity Compensation Torques (Nm) ===";
+                for (size_t i = 0; i < grav_torques.size(); ++i) {
+                    std::cout << "  J" << (i + 1) << ": " << grav_torques[i];
+                }
+                std::cout << std::endl;
+                last_torque_display = current_time;
             }
+
+            // for (size_t i = 0; i < openarm->get_arm().get_motors().size(); ++i) {
+            //     // std::cout << "grav_torques[" << i << "] = " << grav_torques[i] << std::endl;
+            // }
 
             std::vector<openarm::damiao_motor::MITParam> cmds;
             cmds.reserve(grav_torques.size());
 
             std::transform(grav_torques.begin(), grav_torques.end(), std::back_inserter(cmds),
-                           [](double t) { return openarm::damiao_motor::MITParam{0, 0, 0, 0, t}; });
+                           [gravity_scale](double t) {
+                               return openarm::damiao_motor::MITParam{0, 0, 0, 0,
+                                                                       gravity_scale * t};
+                           });
 
             openarm->get_arm().mit_control_all(cmds);
 
@@ -135,9 +155,13 @@ int main(int argc, char** argv) {
 
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-        openarm->disable_all();
-        openarm->recv_all();
-
+        
+         std::cout << "\n=== Disabling Motors ===" << std::endl;
+        for(int i = 0; i < 3; i++) {
+            openarm->disable_all();
+            openarm->recv_all(2000);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         return -1;
