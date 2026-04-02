@@ -11,7 +11,35 @@
     </xacro:unless>
 
 
-    <xacro:ee_link_with_sc name="hand" prefix="${ee_prefix}" ee_kinematics_link="${ee_kinematics_link}"/>
+    <xacro:property name="hand_kinematics" value="${ee_kinematics_link['hand']['kinematic']}" lazy_eval="false" />
+    <xacro:property name="hand_inertial" value="${ee_inertials['hand']}" lazy_eval="false" />
+    <xacro:property
+      name="hand_inertial_y"
+      value="${-hand_inertial.origin.y if 'left' in arm_prefix else hand_inertial.origin.y}" />
+
+    <link name="${ee_prefix}hand">
+      <visual name="${ee_prefix}hand_visual">
+        <origin rpy="${hand_kinematics.roll} ${hand_kinematics.pitch} ${hand_kinematics.yaw}"
+                xyz="${hand_kinematics.x} ${hand_kinematics.y} ${hand_kinematics.z}" />
+        <geometry>
+          <mesh filename="package://${description_pkg}/meshes/ee/${ee_type}/visual/hand.dae" scale="0.001 0.001 0.001" />
+        </geometry>
+      </visual>
+      <collision name="${ee_prefix}hand_collision">
+        <origin rpy="${hand_kinematics.roll} ${hand_kinematics.pitch} ${hand_kinematics.yaw}"
+                xyz="${hand_kinematics.x} ${hand_kinematics.y} ${hand_kinematics.z}" />
+        <geometry>
+          <mesh filename="package://${description_pkg}/meshes/ee/${ee_type}/collision/hand.stl" scale="0.001 0.001 0.001" />
+        </geometry>
+      </collision>
+      <inertial>
+        <origin rpy="${hand_inertial.origin.roll} ${hand_inertial.origin.pitch} ${hand_inertial.origin.yaw}"
+                xyz="${hand_inertial.origin.x} ${hand_inertial_y} ${hand_inertial.origin.z}" />
+        <mass value="${hand_inertial.mass}" />
+        <inertia ixx="${hand_inertial.inertia.xx}" ixy="${hand_inertial.inertia.xy}" ixz="${hand_inertial.inertia.xz}"
+                 iyy="${hand_inertial.inertia.yy}" iyz="${hand_inertial.inertia.yz}" izz="${hand_inertial.inertia.zz}" />
+      </inertial>
+    </link>
     <!-- <link name="${ee_prefix}hand"/> -->
 
     <xacro:unless value="${connected_to == ''}">
