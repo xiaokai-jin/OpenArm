@@ -53,7 +53,7 @@ class GravityCompensationNode : public rclcpp::Node {
     // declare_parameter<T>(name, default)
     // 语法说明：模板参数 T 明确该参数的期望类型。
     publish_rate_hz_ = declare_parameter<double>("publish_rate_hz", 200.0);
-    log_period_sec_ = declare_parameter<double>("log_period_sec", 5.0);
+    log_period_sec_ = declare_parameter<double>("log_period_sec", 15.0);
     robot_description_source_node_ =
         declare_parameter<std::string>("robot_description_source_node", "/robot_state_publisher");
 
@@ -266,6 +266,12 @@ class GravityCompensationNode : public rclcpp::Node {
       for (std::size_t i = 0; i < gravity_torques.size(); ++i) {
         oss << " J" << (i + 1) << "=" << gravity_torques[i];
       }
+      oss << " | joint positions(rad):";
+      constexpr double kRadToDeg = 57.29577951308232;
+      for (std::size_t i = 0; i < joint_positions.size(); ++i) {
+        const double joint_deg = joint_positions[i] * kRadToDeg;
+        oss << " J" << (i + 1) << "=" << joint_positions[i] << "(" << joint_deg << "deg)";
+      }
       RCLCPP_INFO(get_logger(), "%s", oss.str().c_str());
       arm.last_log_time = now;
     }
@@ -293,7 +299,7 @@ class GravityCompensationNode : public rclcpp::Node {
   }
 
   double publish_rate_hz_{200.0};
-  double log_period_sec_{5.0};
+  double log_period_sec_{15.0};
   std::string robot_description_source_node_;
 
   bool dynamics_initialized_{false};

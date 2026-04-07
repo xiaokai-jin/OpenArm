@@ -24,6 +24,7 @@ class KpKdPanel : public rviz_common::Panel {
   void onAnySliderChanged();
   void onPublishClicked();
   void onResetClicked();
+  void onZeroAllClicked();
 
   void initializeRosInterfaces();
   void buildUi();
@@ -45,6 +46,7 @@ class KpKdPanel : public rviz_common::Panel {
   QCheckBox* auto_publish_checkbox_{nullptr};
   QPushButton* publish_button_{nullptr};
   QPushButton* reset_button_{nullptr};
+  QPushButton* zero_all_button_{nullptr};
 
   static constexpr int kJointCount = 7;
   static constexpr int kKpScale = 10;     // 0.1 granularity

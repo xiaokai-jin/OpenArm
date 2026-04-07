@@ -283,10 +283,10 @@ hardware_interface::return_type OpenArmHW::write(
       target_position = pos_states_[i] +
                         (position_diff > 0.0 ? POS_JUMP_TOLERANCE_RAD
                                              : -POS_JUMP_TOLERANCE_RAD);
-      RCLCPP_WARN(rclcpp::get_logger("OpenArmHW"),
-                  "Position jump limited for joint %s: cmd=%f state=%f limited_cmd=%f",
-                  info_.joints[i].name.c_str(), pos_commands_[i],
-                  pos_states_[i], target_position);
+      // RCLCPP_WARN(rclcpp::get_logger("OpenArmHW"),
+      //             "Position jump limited for joint %s: cmd=%f state=%f limited_cmd=%f",
+      //             info_.joints[i].name.c_str(), pos_commands_[i],
+      //             pos_states_[i], target_position);
     }
 
     // 关键控制下发点：

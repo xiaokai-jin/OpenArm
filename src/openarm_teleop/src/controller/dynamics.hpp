@@ -112,4 +112,7 @@ public:
      * @brief 获取完整的质量(惯性)矩阵 H(q) / M(q)
      */
     void GetMassMatrix(const double *motor_position, Eigen::MatrixXd &mass_matrix);
+
+    const KDL::Tree &GetKDLTree() const { return kdl_tree; }
+    const KDL::Chain &GetKDLChain() const { return kdl_chain; }
 };

@@ -1,7 +1,7 @@
 gravity_compensation_node:
   ros__parameters:
     publish_rate_hz: 200.0
-    log_period_sec: 5.0
+    log_period_sec: 15.0
     robot_description_source_node: /robot_state_publisher
 
     left_arm:

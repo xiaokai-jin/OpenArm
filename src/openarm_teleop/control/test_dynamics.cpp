@@ -4,6 +4,55 @@
 #include <controller/dynamics.hpp>
 #include <math.h>
 
+namespace {
+
+const char* JointTypeToString(KDL::Joint::JointType type) {
+    switch (type) {
+        case KDL::Joint::None:
+            return "None(Fixed)";
+        case KDL::Joint::RotAxis:
+            return "RotAxis";
+        case KDL::Joint::RotX:
+            return "RotX";
+        case KDL::Joint::RotY:
+            return "RotY";
+        case KDL::Joint::RotZ:
+            return "RotZ";
+        case KDL::Joint::TransAxis:
+            return "TransAxis";
+        case KDL::Joint::TransX:
+            return "TransX";
+        case KDL::Joint::TransY:
+            return "TransY";
+        case KDL::Joint::TransZ:
+            return "TransZ";
+        default:
+            return "Unknown";
+    }
+}
+
+void PrintKDLTree(const KDL::Tree& tree) {
+    std::cout << "\n============================== KDL Tree ==============================" << std::endl;
+    std::cout << "[KDL Tree] segments: " << tree.getNrOfSegments()
+              << ", joints: " << tree.getNrOfJoints() << std::endl;
+}
+
+void PrintKDLChain(const KDL::Chain& chain) {
+    std::cout << "\n============================== KDL Chain =============================" << std::endl;
+    std::cout << "[KDL Chain] segments: " << chain.getNrOfSegments()
+              << ", joints: " << chain.getNrOfJoints() << std::endl;
+
+    for (unsigned int i = 0; i < chain.getNrOfSegments(); ++i) {
+        const KDL::Segment& seg = chain.getSegment(i);
+        const KDL::Joint& joint = seg.getJoint();
+        std::cout << "  [" << std::setw(2) << i << "] segment=" << seg.getName()
+                  << ", joint=" << joint.getName()
+                  << ", type=" << JointTypeToString(joint.getType()) << std::endl;
+    }
+}
+
+}  // namespace
+
 int main(int argc, char** argv) {
     // 1. 设置工作空间里的 URDF 路径 
     // 根据用户提供的双臂模型文件名称
@@ -27,12 +76,18 @@ int main(int argc, char** argv) {
     }
     std::cout << "\n[INFO] 初始化成功！" << std::endl;
 
+    PrintKDLTree(dyn.GetKDLTree());
+    PrintKDLChain(dyn.GetKDLChain());
+
     // 根据 URDF 解析到的链路，左臂本身是 7 自由度机械臂
     const int dof = 7; 
     
     // 2. 构造虚拟状态测试输入：当前各个关节的角度(rad)和角速度(rad/s)
-    std::vector<double> joint_positions  = {10.0*M_PI/180.0, -15.0*M_PI/180.0, -30.0*M_PI/180.0, 20.0*M_PI/180.0, 10.0*M_PI/180.0, -20*M_PI/180.0, 30.0*M_PI/180.0};
-    std::vector<double> joint_velocities = {0.1, 0.2,  0.0, -0.1, 0.0,  0.1, 0.0};
+    // std::vector<double> joint_positions  = {10.0*M_PI/180.0, -15.0*M_PI/180.0, -30.0*M_PI/180.0, 20.0*M_PI/180.0, 10.0*M_PI/180.0, -20*M_PI/180.0, 30.0*M_PI/180.0};
+    std::vector<double> joint_positions  = {0.0*M_PI/180.0, 0.0*M_PI/180.0, 0.0*M_PI/180.0, 0.0*M_PI/180.0, 0.0*M_PI/180.0, 0.0*M_PI/180.0, 0.0*M_PI/180.0};
+    
+    // std::vector<double> joint_velocities = {0.1, 0.2,  0.0, -0.1, 0.0,  0.1, 0.0};
+    std::vector<double> joint_velocities = {0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0};
 
     // 提前为输出数据分配内存
     std::vector<double> gravity(dof, 0.0);
@@ -77,17 +132,17 @@ int main(int argc, char** argv) {
     std::cout << "\n3. 广义质量惯性矩阵 (Mass Matrix) M(q) [" << dof << "x" << dof << "]:\n";
     std::cout << mass_matrix << "\n";
     
-    std::cout << "\n----------------------------- 补充正向运动学数据 -----------------------------" << std::endl;
+    // std::cout << "\n----------------------------- 补充正向运动学数据 -----------------------------" << std::endl;
     
     std::cout << "4. [惯性矩阵对角线] 各自由度自身等效阻力 (Mass Diagonal) [kg·m^2]:\n   ";
     for(int i = 0; i < dof; i++) std::cout << std::setw(8) << inertia_diag[i] << " ";
     std::cout << "\n\n";
 
-    std::cout << "5. [正运动学] 末端笛卡尔空间坐标 (EE Position XYZ) [m]:\n   ";
-    std::cout << "X: " << p(0) << ", Y: " << p(1) << ", Z: " << p(2) << "\n\n";
+    // std::cout << "5. [正运动学] 末端笛卡尔空间坐标 (EE Position XYZ) [m]:\n   ";
+    // std::cout << "X: " << p(0) << ", Y: " << p(1) << ", Z: " << p(2) << "\n\n";
 
-    std::cout << "6. [正运动学] 末端齐次旋转矩阵 (EE Rotation) [3x3]:\n";
-    std::cout << R << "\n\n";
+    // std::cout << "6. [正运动学] 末端齐次旋转矩阵 (EE Rotation) [3x3]:\n";
+    // std::cout << R << "\n\n";
 
     std::cout << "7. [雅可比矩阵] 将关节速度映射到笛卡尔速度的矩阵 (Jacobian Matrix) [6x" << dof << "]:\n";
     std::cout << jacobian << "\n\n";
