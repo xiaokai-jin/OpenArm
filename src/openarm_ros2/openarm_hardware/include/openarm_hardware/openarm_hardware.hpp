@@ -53,11 +53,11 @@ static const std::size_t GRIPPER_DOF = 1;
 // 总自由度（机械臂 + 夹爪）
 static const std::size_t TOTAL_DOF = ARM_DOF + GRIPPER_DOF;
 // 默认关节刚度（KP），作为命令接口初始值
-static const std::array<double, TOTAL_DOF> DEFAULT_KP = {400.0, 400.0, 150.0, 250.0,
+static const std::array<double, TOTAL_DOF> DEFAULT_KP = {400.0, 400.0, 150.0, 350.0,
                                                  100.0,  100.0,  100.0,  8.0};   //不加重力补偿的硬kp,kd值，后续需要减小
 
 // 默认关节阻尼（KD），作为命令接口初始值
-static const std::array<double, TOTAL_DOF> DEFAULT_KD = {4.0, 4.0, 2.0, 2.5,
+static const std::array<double, TOTAL_DOF> DEFAULT_KD = {4.0, 4.0, 2.0, 3.2,
                                                  1.5,  1.5, 1.5, 1.2};
 
 // // 默认关节刚度（KP），作为命令接口初始值

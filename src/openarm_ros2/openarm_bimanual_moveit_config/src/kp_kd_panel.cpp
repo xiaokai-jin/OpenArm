@@ -14,8 +14,8 @@
 namespace openarm_bimanual_moveit_config {
 
 namespace {
-constexpr std::array<double, 7> kDefaultKp = {400.0, 400.0, 150.0, 250.0, 100.0, 100.0, 100.0};
-constexpr std::array<double, 7> kDefaultKd = {4.0, 4.0, 2.0, 2.5, 1.5, 1.5, 1.5};
+constexpr std::array<double, 7> kDefaultKp = {400.0, 400.0, 150.0, 350.0, 100.0, 100.0, 100.0};
+constexpr std::array<double, 7> kDefaultKd = {4.0, 4.0, 2.0, 3.2, 1.5, 1.5, 1.5};
 
 std::string formatDouble(double value, int precision) {
   std::ostringstream stream;
