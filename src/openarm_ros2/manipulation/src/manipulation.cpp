@@ -3,6 +3,11 @@
 #include <iterator>
 #include <thread>
 #include <cmath>
+#include <chrono>
+#include <fstream>
+#include <iomanip>
+#include <sstream>
+#include <ctime>
 #include <rclcpp/rclcpp.hpp>
 #include <moveit/move_group_interface/move_group_interface.h> // 包含MoveIt的移动组接口头文件
 #include <moveit/planning_scene_interface/planning_scene_interface.h> // 包含MoveIt的规划场景接口头文件
@@ -13,9 +18,137 @@
 #include <moveit_msgs/msg/collision_object.hpp> // 包含碰撞对象的消息头文件
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <moveit_visual_tools/moveit_visual_tools.h> // 包含MoveIt可视化工具的头文件
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("openarm_manipulation");
+static const std::string ERROR_CSV_PATH = "/home/xiaokai/OpenArm/repeatability_error.csv";
+
+struct PoseErrorMetrics
+{
+  double dx{0.0};
+  double dy{0.0};
+  double dz{0.0};
+  double position_error{0.0};
+  double roll_error_deg{0.0};
+  double pitch_error_deg{0.0};
+  double yaw_error_deg{0.0};
+  double orientation_error_deg{0.0};
+};
+
+static PoseErrorMetrics calculatePoseErrorMetrics(
+  const geometry_msgs::msg::Pose & target_pose,
+  const geometry_msgs::msg::Pose & actual_pose)
+{
+  PoseErrorMetrics metrics;
+  metrics.dx = actual_pose.position.x - target_pose.position.x;
+  metrics.dy = actual_pose.position.y - target_pose.position.y;
+  metrics.dz = actual_pose.position.z - target_pose.position.z;
+  metrics.position_error = std::sqrt(
+    metrics.dx * metrics.dx + metrics.dy * metrics.dy + metrics.dz * metrics.dz);
+
+  tf2::Quaternion q_target;
+  tf2::Quaternion q_actual;
+  tf2::fromMsg(target_pose.orientation, q_target);
+  tf2::fromMsg(actual_pose.orientation, q_actual);
+  q_target.normalize();
+  q_actual.normalize();
+
+  const tf2::Quaternion q_delta = q_target.inverse() * q_actual;
+  const double sin_half_angle = std::sqrt(
+    q_delta.x() * q_delta.x() + q_delta.y() * q_delta.y() + q_delta.z() * q_delta.z());
+  const double orientation_error_rad = 2.0 * std::atan2(sin_half_angle, std::fabs(q_delta.w()));
+
+  double roll_error = 0.0;
+  double pitch_error = 0.0;
+  double yaw_error = 0.0;
+  tf2::Matrix3x3(q_delta).getRPY(roll_error, pitch_error, yaw_error);
+
+  metrics.roll_error_deg = roll_error * 180.0 / M_PI;
+  metrics.pitch_error_deg = pitch_error * 180.0 / M_PI;
+  metrics.yaw_error_deg = yaw_error * 180.0 / M_PI;
+  metrics.orientation_error_deg = orientation_error_rad * 180.0 / M_PI;
+
+  return metrics;
+}
+
+static void appendPoseErrorToCsv(
+  const std::string & name,
+  const geometry_msgs::msg::Pose & target_pose,
+  const geometry_msgs::msg::Pose & actual_pose,
+  const PoseErrorMetrics & metrics)
+{
+  std::ifstream csv_check(ERROR_CSV_PATH);
+  const bool need_header = !csv_check.good() || csv_check.peek() == std::ifstream::traits_type::eof();
+  csv_check.close();
+
+  std::ofstream csv_file(ERROR_CSV_PATH, std::ios::out | std::ios::app);
+  if (!csv_file.is_open())
+  {
+    RCLCPP_ERROR(LOGGER, "Failed to open CSV file for writing: %s", ERROR_CSV_PATH.c_str());
+    return;
+  }
+
+  if (need_header)
+  {
+    csv_file << "timestamp,name,"
+             << "target_x,target_y,target_z,target_qx,target_qy,target_qz,target_qw,"
+             << "actual_x,actual_y,actual_z,actual_qx,actual_qy,actual_qz,actual_qw,"
+             << "dx,dy,dz,position_error_m,roll_error_deg,pitch_error_deg,yaw_error_deg,orientation_error_deg\n";
+  }
+
+  const auto now = std::chrono::system_clock::now();
+  const std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+  std::tm now_tm{};
+  localtime_r(&now_c, &now_tm);
+
+  csv_file << std::put_time(&now_tm, "%F %T") << ','
+           << name << ','
+           << target_pose.position.x << ','
+           << target_pose.position.y << ','
+           << target_pose.position.z << ','
+           << target_pose.orientation.x << ','
+           << target_pose.orientation.y << ','
+           << target_pose.orientation.z << ','
+           << target_pose.orientation.w << ','
+           << actual_pose.position.x << ','
+           << actual_pose.position.y << ','
+           << actual_pose.position.z << ','
+           << actual_pose.orientation.x << ','
+           << actual_pose.orientation.y << ','
+           << actual_pose.orientation.z << ','
+           << actual_pose.orientation.w << ','
+           << metrics.dx << ','
+           << metrics.dy << ','
+           << metrics.dz << ','
+           << metrics.position_error << ','
+           << metrics.roll_error_deg << ','
+           << metrics.pitch_error_deg << ','
+           << metrics.yaw_error_deg << ','
+           << metrics.orientation_error_deg << '\n';
+}
+
+static void reportPoseError(
+  const std::string & name,
+  const geometry_msgs::msg::Pose & target_pose,
+  const geometry_msgs::msg::Pose & actual_pose)
+{
+  const PoseErrorMetrics metrics = calculatePoseErrorMetrics(target_pose, actual_pose);
+
+  RCLCPP_INFO(
+    LOGGER,
+    "[%s] position error: dx=%.6f m, dy=%.6f m, dz=%.6f m, norm=%.6f m | "
+    "orientation error: roll=%.3f deg, pitch=%.3f deg, yaw=%.3f deg, angle=%.3f deg",
+    name.c_str(),
+    metrics.dx, metrics.dy, metrics.dz, metrics.position_error,
+    metrics.roll_error_deg,
+    metrics.pitch_error_deg,
+    metrics.yaw_error_deg,
+    metrics.orientation_error_deg);
+
+  appendPoseErrorToCsv(name, target_pose, actual_pose, metrics);
+}
 
 int main(int argc, char ** argv)
 {
@@ -195,6 +328,10 @@ int main(int argc, char ** argv)
   {
     // 用已生成的 my_plan 执行，避免 move() 再次触发内部重规划
     move_group_upper_body.execute(my_plan);
+    // auto actual_pose_right_1 = move_group_upper_body.getCurrentPose("openarm_right_hand_tcp").pose;
+    // auto actual_pose_left_1 = move_group_upper_body.getCurrentPose("openarm_left_hand_tcp").pose;
+    // reportPoseError("pose1_right", target_pose1_right, actual_pose_right_1);
+    // reportPoseError("pose1_left", target_pose1_left, actual_pose_left_1);
   }
   visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");
   
@@ -294,116 +431,15 @@ int main(int argc, char ** argv)
   {
     // 用已生成的 my_plan 执行，避免 move() 再次触发内部重规划
     move_group_upper_body.execute(my_plan2);
+    // auto actual_pose_right_2 = move_group_upper_body.getCurrentPose("openarm_right_hand_tcp").pose;
+    // auto actual_pose_left_2 = move_group_upper_body.getCurrentPose("openarm_left_hand_tcp").pose;
+    // reportPoseError("pose2_right", target_pose2_right, actual_pose_right_2);
+    // reportPoseError("pose2_left", target_pose2_left, actual_pose_left_2);
   }
   move_group_upper_body.clearPathConstraints(); // 清除路径约束，否则后续规划会一直受限于这个约束
   visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");
 
-  // 5) 双臂带路径约束在 XY 平面画圆
-  //    这里使用“离散圆点 + 每点IK + 每段规划执行”的方式实现。
-  //    两个末端TCP保持固定姿态，仅在 XY 平面移动（Z 保持不变）。
-  // moveit_msgs::msg::OrientationConstraint ocm_left_circle;
-  // ocm_left_circle.link_name = "openarm_left_hand_tcp";
-  // ocm_left_circle.header.frame_id = "world";
-  // ocm_left_circle.orientation = target_pose2_left.orientation;
-  // ocm_left_circle.absolute_x_axis_tolerance = 0.12;
-  // ocm_left_circle.absolute_y_axis_tolerance = 0.12;
-  // ocm_left_circle.absolute_z_axis_tolerance = 0.12;
-  // ocm_left_circle.weight = 1.0;
-
-  moveit_msgs::msg::OrientationConstraint ocm_right_circle;
-  ocm_right_circle.link_name = "openarm_right_hand_tcp";
-  ocm_right_circle.header.frame_id = "world";
-  ocm_right_circle.orientation = target_pose2_right.orientation;
-  ocm_right_circle.absolute_x_axis_tolerance = 0.12;
-  ocm_right_circle.absolute_y_axis_tolerance = 0.12;
-  ocm_right_circle.absolute_z_axis_tolerance = 0.12;
-  ocm_right_circle.weight = 1.0;
-
-  moveit_msgs::msg::Constraints circle_constraints;
-  // circle_constraints.orientation_constraints.push_back(ocm_left_circle);
-  circle_constraints.orientation_constraints.push_back(ocm_right_circle);
-  move_group_upper_body.setPathConstraints(circle_constraints);
-
-  geometry_msgs::msg::Pose left_circle_start = move_group_upper_body.getCurrentPose("openarm_left_hand_tcp").pose;
-  geometry_msgs::msg::Pose right_circle_start = move_group_upper_body.getCurrentPose("openarm_right_hand_tcp").pose;
-
-  const double radius = 0.03;  // 圆半径（约3cm）
-  const int circle_steps = 24; // 离散点数，越大越圆滑
-  const double two_pi = 2.0 * M_PI;
-
-  const double left_center_x = left_circle_start.position.x - radius;
-  const double left_center_y = left_circle_start.position.y;
-  const double right_center_x = right_circle_start.position.x - radius;
-  const double right_center_y = right_circle_start.position.y;
-
-  visual_tools.publishText(text_pose, "dual-arm xy circle", rviz_visual_tools::RED, rviz_visual_tools::XLARGE);
-  visual_tools.trigger();
-  visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to draw a dual-arm XY circle");
-
-  bool circle_all_success = true;
-  for (int step = 1; step <= circle_steps; ++step)
-  {
-    const double theta = two_pi * static_cast<double>(step) / static_cast<double>(circle_steps);
-
-    geometry_msgs::msg::Pose left_circle_pose = left_circle_start;
-    left_circle_pose.position.x = left_center_x + radius * std::cos(theta);
-    left_circle_pose.position.y = left_center_y + radius * std::sin(theta);
-
-    geometry_msgs::msg::Pose right_circle_pose = right_circle_start;
-    right_circle_pose.position.x = right_center_x + radius * std::cos(theta);
-    right_circle_pose.position.y = right_center_y + radius * std::sin(theta);
-
-    auto circle_state = move_group_upper_body.getCurrentState(2.0);
-    if (!circle_state)
-    {
-      RCLCPP_ERROR(LOGGER, "Failed to get current state during circle motion");
-      circle_all_success = false;
-      break;
-    }
-
-    moveit::core::RobotState circle_target_state(*circle_state);
-    bool left_circle_ok = circle_target_state.setFromIK(left_arm_jmg, left_circle_pose, "openarm_left_hand_tcp", 1.0);
-    bool right_circle_ok = circle_target_state.setFromIK(right_arm_jmg, right_circle_pose, "openarm_right_hand_tcp", 1.0);
-    if (!left_circle_ok || !right_circle_ok)
-    {
-      RCLCPP_WARN(LOGGER, "Circle IK failed at step %d: left=%d right=%d", step, left_circle_ok, right_circle_ok);
-      circle_all_success = false;
-      break;
-    }
-
-    for (const auto & joint_name : upper_body_joint_names)
-    {
-      joint_target[joint_name] = circle_target_state.getVariablePosition(joint_name);
-    }
-
-    if (!move_group_upper_body.setJointValueTarget(joint_target))
-    {
-      RCLCPP_WARN(LOGGER, "Failed to set circle joint target at step %d", step);
-      circle_all_success = false;
-      break;
-    }
-
-    moveit::planning_interface::MoveGroupInterface::Plan circle_plan;
-    bool circle_plan_ok =
-      (move_group_upper_body.plan(circle_plan) == moveit::core::MoveItErrorCode::SUCCESS);
-    if (!circle_plan_ok)
-    {
-      RCLCPP_WARN(LOGGER, "Circle planning failed at step %d", step);
-      circle_all_success = false;
-      break;
-    }
-
-    auto exec_ret = move_group_upper_body.execute(circle_plan);
-    if (exec_ret != moveit::core::MoveItErrorCode::SUCCESS)
-    {
-      RCLCPP_WARN(LOGGER, "Circle execution failed at step %d", step);
-      circle_all_success = false;
-      break;
-    }
-  }
-
-  move_group_upper_body.clearPathConstraints();
-  RCLCPP_INFO(LOGGER, "Dual-arm XY circle %s", circle_all_success ? "COMPLETED" : "STOPPED");
+  
 
   rclcpp::shutdown();
   return 0;

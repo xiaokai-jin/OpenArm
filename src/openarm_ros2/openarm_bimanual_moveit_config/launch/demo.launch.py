@@ -356,6 +356,18 @@ def generate_launch_description():
     ).to_moveit_configs()
 
     moveit_params = moveit_config.to_dict()
+    
+    # [修改]：放宽或关闭 MoveIt 对执行轨迹的时间超时监控，解决夹取物体因为受阻而被判超时的 Cancel 问题
+    if "trajectory_execution.allowed_execution_duration_scaling" in moveit_params:
+        moveit_params["trajectory_execution.allowed_execution_duration_scaling"] = 100.0
+    else:
+        moveit_params.update({"trajectory_execution.allowed_execution_duration_scaling": 100.0})
+        
+    if "trajectory_execution.allowed_goal_duration_margin" in moveit_params:
+        moveit_params["trajectory_execution.allowed_goal_duration_margin"] = 10.0
+    else:
+        moveit_params.update({"trajectory_execution.allowed_goal_duration_margin": 10.0})
+
     # Add robot description to MoveIt parameters
     planning_scene_monitor_parameters = {
         "publish_planning_scene": True,

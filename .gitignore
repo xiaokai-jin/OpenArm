@@ -18,3 +18,6 @@ src/openarm_kinematics_dynamics_modeling_guide.md
 src/openarm_ros2/openarm_bimanual_moveit_config/config/kinematics_solvers_explanation.md
 src/openarm_description/urdf/arm/*_analysis.md
 src/kp_kd_controller_implementation_guide.md
+*.md
+*.pdf
+*.csv

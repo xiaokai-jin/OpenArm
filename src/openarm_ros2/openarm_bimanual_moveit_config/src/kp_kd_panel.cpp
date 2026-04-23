@@ -16,6 +16,8 @@ namespace openarm_bimanual_moveit_config {
 namespace {
 constexpr std::array<double, 7> kDefaultKp = {400.0, 400.0, 150.0, 350.0, 100.0, 100.0, 100.0};
 constexpr std::array<double, 7> kDefaultKd = {4.0, 4.0, 2.0, 3.2, 1.5, 1.5, 1.5};
+constexpr std::array<double, 7> kImpedanceKp = {12.5, 12.5, 3.0, 5.0, 2.3, 2.3, 2.3};
+constexpr std::array<double, 7> kImpedanceKd = {0.06, 0.06, 0.05, 0.05, 0.03, 0.03, 0.03};
 
 std::string formatDouble(double value, int precision) {
   std::ostringstream stream;
@@ -97,15 +99,18 @@ void KpKdPanel::buildUi() {
   publish_button_ = new QPushButton("Publish Once");
   reset_button_ = new QPushButton("Reset Defaults");
   zero_all_button_ = new QPushButton("Zero All");
+  impedance_button_ = new QPushButton("Set Impedance");
 
   connect(publish_button_, &QPushButton::clicked, this, &KpKdPanel::onPublishClicked);
   connect(reset_button_, &QPushButton::clicked, this, &KpKdPanel::onResetClicked);
   connect(zero_all_button_, &QPushButton::clicked, this, &KpKdPanel::onZeroAllClicked);
+  connect(impedance_button_, &QPushButton::clicked, this, &KpKdPanel::onImpedanceClicked);
 
   control_layout->addWidget(auto_publish_checkbox_);
   control_layout->addWidget(publish_button_);
   control_layout->addWidget(reset_button_);
   control_layout->addWidget(zero_all_button_);
+  control_layout->addWidget(impedance_button_);
   root_layout->addLayout(control_layout);
 
   root_layout->addStretch();
@@ -195,6 +200,15 @@ void KpKdPanel::onZeroAllClicked() {
   for (int index = 0; index < kJointCount; ++index) {
     kp_sliders_[index]->setValue(kKpMin);
     kd_sliders_[index]->setValue(kKdMin);
+  }
+  refreshValueLabels();
+  publishCommands();
+}
+
+void KpKdPanel::onImpedanceClicked() {
+  for (int index = 0; index < kJointCount; ++index) {
+    kp_sliders_[index]->setValue(static_cast<int>(kImpedanceKp[index] * kKpScale));
+    kd_sliders_[index]->setValue(static_cast<int>(kImpedanceKd[index] * kKdScale));
   }
   refreshValueLabels();
   publishCommands();

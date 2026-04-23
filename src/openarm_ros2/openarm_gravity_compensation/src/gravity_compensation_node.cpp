@@ -260,21 +260,21 @@ class GravityCompensationNode : public rclcpp::Node {
 
     // 周期性输出当前前馈力矩，便于在线观察补偿是否生效。
     const auto now = this->now();
-    if ((now - arm.last_log_time).seconds() >= log_period_sec_) {
-      std::ostringstream oss;
-      oss << arm.name << " gravity ff torques:";
-      for (std::size_t i = 0; i < gravity_torques.size(); ++i) {
-        oss << " J" << (i + 1) << "=" << gravity_torques[i];
-      }
-      oss << " | joint positions(rad):";
-      constexpr double kRadToDeg = 57.29577951308232;
-      for (std::size_t i = 0; i < joint_positions.size(); ++i) {
-        const double joint_deg = joint_positions[i] * kRadToDeg;
-        oss << " J" << (i + 1) << "=" << joint_positions[i] << "(" << joint_deg << "deg)";
-      }
-      RCLCPP_INFO(get_logger(), "%s", oss.str().c_str());
-      arm.last_log_time = now;
-    }
+    // if ((now - arm.last_log_time).seconds() >= log_period_sec_) {
+    //   std::ostringstream oss;
+    //   oss << arm.name << " gravity ff torques:";
+    //   for (std::size_t i = 0; i < gravity_torques.size(); ++i) {
+    //     oss << " J" << (i + 1) << "=" << gravity_torques[i];
+    //   }
+    //   oss << " | joint positions(rad):";
+    //   constexpr double kRadToDeg = 57.29577951308232;
+    //   for (std::size_t i = 0; i < joint_positions.size(); ++i) {
+    //     const double joint_deg = joint_positions[i] * kRadToDeg;
+    //     oss << " J" << (i + 1) << "=" << joint_positions[i] << "(" << joint_deg << "deg)";
+    //   }
+    //   RCLCPP_INFO(get_logger(), "%s", oss.str().c_str());
+    //   arm.last_log_time = now;
+    // }
   }
 
   // 定时器主循环：初始化检查 -> 读取最新状态 -> 左右臂发布
