@@ -93,7 +93,7 @@ void KpKdPanel::buildUi() {
   kd_group->setLayout(kd_layout);
   root_layout->addWidget(kd_group);
 
-  auto* control_layout = new QHBoxLayout();
+  auto* control_layout = new QVBoxLayout();
   auto_publish_checkbox_ = new QCheckBox("Auto Publish");
   auto_publish_checkbox_->setChecked(false);
   publish_button_ = new QPushButton("Publish Once");

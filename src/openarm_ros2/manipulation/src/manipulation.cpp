@@ -22,6 +22,7 @@
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
+
 static const rclcpp::Logger LOGGER = rclcpp::get_logger("openarm_manipulation");
 static const std::string ERROR_CSV_PATH = "/home/xiaokai/OpenArm/repeatability_error.csv";
 
@@ -175,12 +176,16 @@ int main(int argc, char ** argv)
 
   static const std::string PLANNING_GROUP_RIGHT_ARM = "right_arm"; // 定义规划组名称
   static const std::string PLANNING_GROUP_RIGHT_SIDE = "right_side"; // 定义规划组名称        
-  static const std::string PLANNING_GROUP_UPPER_BODY = "upper_body"; // 定义规划组名称        
+  static const std::string PLANNING_GROUP_UPPER_BODY = "upper_body"; // 定义规划组名称
+  static const std::string PLANNING_GROUP_LEFT_GRIPPER = "left_gripper"; // 定义规划组名称  
+  static const std::string PLANNING_GROUP_RIGHT_GRIPPER = "right_gripper"; // 定义规划组名称      
 
   // 2) 创建 MoveGroup：单臂、单侧、双臂整体
   moveit::planning_interface::MoveGroupInterface move_group_right_arm(move_group_node, PLANNING_GROUP_RIGHT_ARM); // 创建MoveGroupInterface对象
   moveit::planning_interface::MoveGroupInterface move_group_right_side(move_group_node, PLANNING_GROUP_RIGHT_SIDE); // 创建MoveGroupInterface对象
   moveit::planning_interface::MoveGroupInterface move_group_upper_body(move_group_node, PLANNING_GROUP_UPPER_BODY); // 创建MoveGroupInterface对象
+  moveit::planning_interface::MoveGroupInterface move_group_left_gripper(move_group_node, PLANNING_GROUP_LEFT_GRIPPER); // 创建MoveGroupInterface对象
+  moveit::planning_interface::MoveGroupInterface move_group_right_gripper(move_group_node, PLANNING_GROUP_RIGHT_GRIPPER); // 创建MoveGroupInterface对象
   moveit::planning_interface::PlanningSceneInterface planning_scene_interface; // 创建PlanningSceneInterface
   const moveit::core::JointModelGroup* joint_model_group_right_side =
       move_group_right_side.getCurrentState()->getJointModelGroup(PLANNING_GROUP_RIGHT_SIDE); // 获取当前状态的关节模型组
@@ -207,7 +212,7 @@ int main(int argc, char ** argv)
   visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to start the demo");
   // 3) 双臂联合位姿目标（关键思路）
   //    upper_body 是组合组（left_side + right_side），不是单链。
-  //    因此不要指望直接用 upper_body 做“单一末端 IK”。
+  //    因此不能直接用 upper_body 做“单一末端 IK”。
   //    正确方式：
   //      a. 分别对 left_arm / right_arm 求 IK
   //      b. 把结果合并为 upper_body 关节目标
@@ -235,7 +240,7 @@ int main(int argc, char ** argv)
   target_pose1_left.orientation = tf2::toMsg(q_left); // 左臂末端姿态绕 Y 轴旋转 -90 度，绕 Z 轴旋转 45 度
   target_pose1_left.position.x = 0.2;
   target_pose1_left.position.y = 0;
-  target_pose1_left.position.z = 0.35;
+  target_pose1_left.position.z = 0.4;
   std::cout << "Target pose right hand: position(" << target_pose1_right.position.x << ", " 
             << target_pose1_right.position.y << ", " << target_pose1_right.position.z 
             << ") orientation(" << target_pose1_right.orientation.w << ")" << std::endl;
@@ -328,6 +333,20 @@ int main(int argc, char ** argv)
   {
     // 用已生成的 my_plan 执行，避免 move() 再次触发内部重规划
     move_group_upper_body.execute(my_plan);
+    
+    // 打开夹爪
+    move_group_left_gripper.setNamedTarget("open");
+    move_group_left_gripper.move();
+    move_group_right_gripper.setNamedTarget("open");
+    move_group_right_gripper.move();
+    visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to close the grippers");
+    // 关闭夹爪
+    move_group_left_gripper.setNamedTarget("closed");
+    move_group_left_gripper.move();
+
+    move_group_right_gripper.setNamedTarget("closed");
+    move_group_right_gripper.move();
+    
     // auto actual_pose_right_1 = move_group_upper_body.getCurrentPose("openarm_right_hand_tcp").pose;
     // auto actual_pose_left_1 = move_group_upper_body.getCurrentPose("openarm_left_hand_tcp").pose;
     // reportPoseError("pose1_right", target_pose1_right, actual_pose_right_1);
@@ -379,7 +398,7 @@ int main(int argc, char ** argv)
   target_pose2_left.orientation = tf2::toMsg(q_left); // 左臂末端姿态绕 Y 轴旋转 -90 度，绕 Z 轴旋转 45 度
   target_pose2_left.position.x = 0.25;
   target_pose2_left.position.y = 0.05;
-  target_pose2_left.position.z = 0.45;
+  target_pose2_left.position.z = 0.5;
 
   visual_tools.publishAxisLabeled(target_pose2_right, "pose2_right"); // 可视化目标姿态
   visual_tools.publishAxisLabeled(target_pose2_left, "pose2_left"); // 可视化目标姿态
@@ -429,8 +448,23 @@ int main(int argc, char ** argv)
     /* 在使用真实机器人时取消注释下面的行 */
   if (success)
   {
-    // 用已生成的 my_plan 执行，避免 move() 再次触发内部重规划
+    // 用已生成的 my_plan2 执行，避免 move() 再次触发内部重规划
     move_group_upper_body.execute(my_plan2);
+    
+    // 打开夹爪
+    move_group_left_gripper.setNamedTarget("open");
+    move_group_left_gripper.move();
+
+    move_group_right_gripper.setNamedTarget("open");
+    move_group_right_gripper.move();
+    visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to close the grippers");
+    // 关闭夹爪
+    move_group_left_gripper.setNamedTarget("closed");
+    move_group_left_gripper.move();
+
+    move_group_right_gripper.setNamedTarget("closed");
+    move_group_right_gripper.move();
+    
     // auto actual_pose_right_2 = move_group_upper_body.getCurrentPose("openarm_right_hand_tcp").pose;
     // auto actual_pose_left_2 = move_group_upper_body.getCurrentPose("openarm_left_hand_tcp").pose;
     // reportPoseError("pose2_right", target_pose2_right, actual_pose_right_2);
