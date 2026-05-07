@@ -173,3 +173,33 @@ ros2 node list | grep gravity_compensation_node
 ros2 topic hz /left_gravity_compensation_controller/commands
 ros2 topic hz /right_gravity_compensation_controller/commands
 ```
+
+## ✅ 新增：基于 MoveIt Servo 的笛卡尔空间连续控制 (TCP Teleop)
+
+为了满足对末端执行器进行精准的 XYZ 与姿态连续调整，现已全面集成 **MoveIt Servo** (原 MoveIt Jog Arm)。使用该功能可通过键盘实时控制双臂末端在笛卡尔空间的增量运动。
+
+**技术亮点：**
+- 100Hz 连续差分速度发布（`TwistStamped`），响应丝滑。
+- 按下运动，松开即停（0.1s超时保护机制）。
+- 自动避开运动学奇异点（Singularity），避免规划崩溃。
+
+**如何使用：**
+
+1. **启动带有 Servo 的主节点**
+   开启参数 `use_servo:=true` 以挂载 `moveit_servo` 节点（仿真验证可追加 `use_fake_hardware:=true`）：
+   ```bash
+   ros2 launch openarm_bimanual_moveit_config demo.launch.py use_fake_hardware:=true use_servo:=true
+   ```
+2. **运行控制脚本**
+   在一个新终端运行键盘监听节点：
+   ```bash
+   python3 src/openarm_teleop/script/servo_keyboard.py
+   ```
+3. **按键说明**
+   - **Tab**：在【左臂】与【右臂】之间无缝切换。
+   - **W / S**：末端前进 / 后退 (+/- X)
+   - **A / D**：末端左移 / 右移 (+/- Y)
+   - **Q / E**：末端上升 / 下降 (+/- Z)
+   - **U / J / I / K / O / L**：分别控制 Roll、Pitch、Yaw 姿态偏转。
+   - **空格(Space) / X**：急停。
+

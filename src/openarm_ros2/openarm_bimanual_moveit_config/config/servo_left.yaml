@@ -1,0 +1,41 @@
+/**:
+  ros__parameters:
+    moveit_servo:
+      use_gazebo: false
+      command_in_type: "speed_units"
+      scale:
+        linear: 0.4
+        rotational: 0.8
+        joint: 0.5
+      low_pass_filter_coeff: 2.0
+      publish_period: 0.05
+      command_out_type: "trajectory_msgs/JointTrajectory"
+      publish_joint_positions: true
+      publish_joint_velocities: true
+      publish_joint_accelerations: false
+      step_size: 0.01
+
+      # 放宽奇异点检测的阈值（数值越大越放宽）
+      lower_singularity_threshold: 100.0
+      hard_stop_singularity_threshold: 130.0
+
+      # 放避障检测距离
+      collision_check_rate: 10.0
+      collision_check_type: threshold_distance
+      self_collision_proximity_threshold: 0.01
+      scene_collision_proximity_threshold: 0.02
+
+      joint_topic: /joint_states
+      append_joint_state_to_trajectory: true
+
+      command_out_topic: /left_joint_trajectory_controller/joint_trajectory
+      cartesian_command_in_topic: ~/delta_twist_cmds
+      joint_command_in_topic: ~/delta_joint_cmds
+
+      robot_link_command_frame: world
+      ee_frame_name: openarm_left_hand_tcp
+      planning_frame: world
+
+      move_group_name: left_arm
+      is_primary_planning_scene_monitor: false
+      check_collisions: false

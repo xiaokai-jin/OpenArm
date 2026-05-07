@@ -333,6 +333,7 @@ int main(int argc, char ** argv)
   {
     // 用已生成的 my_plan 执行，避免 move() 再次触发内部重规划
     move_group_upper_body.execute(my_plan);
+    visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");
     
     // 打开夹爪
     move_group_left_gripper.setNamedTarget("open");
@@ -450,6 +451,7 @@ int main(int argc, char ** argv)
   {
     // 用已生成的 my_plan2 执行，避免 move() 再次触发内部重规划
     move_group_upper_body.execute(my_plan2);
+    visual_tools.prompt("Press 'next' in the RvizVisualToolsGui window to continue the demo");
     
     // 打开夹爪
     move_group_left_gripper.setNamedTarget("open");

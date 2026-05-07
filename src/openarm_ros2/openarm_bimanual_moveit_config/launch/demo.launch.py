@@ -221,6 +221,9 @@ def generate_launch_description():
 
         # 新增：重力补偿总开关（false 时不启动重力相关节点与控制器）
         DeclareLaunchArgument("use_gravity_compensation", default_value="true"),
+        
+        # 新增：MoveIt Servo 开关，用键盘或手柄遥控TCP的控制节点
+        DeclareLaunchArgument("use_servo", default_value="false"),
 
         # 新增：重力节点参数文件
         DeclareLaunchArgument(
@@ -244,6 +247,7 @@ def generate_launch_description():
     arm_prefix = LaunchConfiguration("arm_prefix")
     hand = LaunchConfiguration("hand")
     use_gravity_compensation = LaunchConfiguration("use_gravity_compensation")
+    use_servo = LaunchConfiguration("use_servo")
     gravity_compensation_params_file = LaunchConfiguration("gravity_compensation_params_file")
 
     # PathJoinSubstitution + FindPackageShare 是 launch 场景下推荐的路径拼接方式
@@ -328,18 +332,7 @@ def generate_launch_description():
         condition=IfCondition(use_gravity_compensation),
     )
 
-    # 以下 TimerAction 用于控制启动顺序：
-    # 先底层 state/controller，再上层重力前馈，避免“话题在发但控制器未激活”的窗口期。
-    delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
-    delayed_arm_ctrl = TimerAction(
-        period=1.0, actions=[controller_spawner_func])
-    delayed_gripper_left = TimerAction(period=3.0, actions=[left_gripper_spawner])
-    delayed_gripper_right = TimerAction(period=3.5, actions=[right_gripper_spawner])
-    delayed_stiffness = TimerAction(period=4.0, actions=[stiffness_spawner])
-    delayed_damping = TimerAction(period=4.5, actions=[damping_spawner])
-    delayed_left_gravity_ff = TimerAction(period=5.0, actions=[left_gravity_ff_spawner])
-    delayed_right_gravity_ff = TimerAction(period=5.5, actions=[right_gravity_ff_spawner])
-
+     
     # 新增：重力补偿节点本体。
     # 该节点输出 tau_ff 到左右 effort forward controller。
     gravity_compensation_node = Node(
@@ -404,6 +397,60 @@ def generate_launch_description():
         arguments=["-d", rviz_cfg],
         parameters=[moveit_params],
     )
+    # -----------------------------
+    # 增加 MoveIt Servo 节点
+    # -----------------------------
+    servo_left_yaml = PathJoinSubstitution([
+        FindPackageShare("openarm_bimanual_moveit_config"),
+        "config",
+        "servo_left.yaml"
+    ])
+    servo_node_left = Node(
+        package="moveit_servo",
+        executable="servo_node_main",
+        name="servo_node_left",
+        output="screen",
+        condition=IfCondition(use_servo),
+        parameters=[
+            servo_left_yaml,
+            moveit_config.robot_description,
+            moveit_config.robot_description_semantic,
+            moveit_config.robot_description_kinematics,
+        ],
+    )
+
+    servo_right_yaml = PathJoinSubstitution([
+        FindPackageShare("openarm_bimanual_moveit_config"),
+        "config",
+        "servo_right.yaml"
+    ])
+    servo_node_right = Node(
+        package="moveit_servo",
+        executable="servo_node_main",
+        name="servo_node_right",
+        output="screen",
+        condition=IfCondition(use_servo),
+        parameters=[
+            servo_right_yaml,
+            moveit_config.robot_description,
+            moveit_config.robot_description_semantic,
+            moveit_config.robot_description_kinematics,
+        ],
+    )
+    # 以下 TimerAction 用于控制启动顺序：
+    # 先底层 state/controller，再上层重力前馈，避免“话题在发但控制器未激活”的窗口期。
+    delayed_jsb = TimerAction(period=2.0, actions=[jsb_spawner])
+    delayed_arm_ctrl = TimerAction(
+        period=1.0, actions=[controller_spawner_func])
+    delayed_gripper_left = TimerAction(period=3.0, actions=[left_gripper_spawner])
+    delayed_gripper_right = TimerAction(period=3.5, actions=[right_gripper_spawner])
+    delayed_stiffness = TimerAction(period=4.0, actions=[stiffness_spawner])
+    delayed_damping = TimerAction(period=4.5, actions=[damping_spawner])
+    delayed_left_gravity_ff = TimerAction(period=5.0, actions=[left_gravity_ff_spawner])
+    delayed_right_gravity_ff = TimerAction(period=5.5, actions=[right_gravity_ff_spawner])
+    delayed_servo_left = TimerAction(period=6.0, actions=[servo_node_left])
+    delayed_servo_right = TimerAction(period=6.5, actions=[servo_node_right])
+   
 
     # LaunchDescription 按声明顺序提交 action；
     # 实际执行时会并发处理，但受 TimerAction/Condition 约束。
@@ -419,6 +466,8 @@ def generate_launch_description():
             delayed_damping,
             delayed_left_gravity_ff,
             delayed_right_gravity_ff,
+            delayed_servo_left,
+            delayed_servo_right,
             gravity_compensation_node,
             run_move_group_node,
             rviz_node,

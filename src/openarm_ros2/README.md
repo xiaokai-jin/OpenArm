@@ -31,7 +31,7 @@ Each link has a visual mesh and a collision mesh, as shown in the figures below:
 
 ### MoveIt2 Support
 
-
+We fully integrate MoveIt2. With the addition of MoveIt Servo nodes, the stack supports both point-to-point joint-space trajectories as well as 100Hz real-time differential Cartesian (TCP) velocity commands.
 
 https://github.com/user-attachments/assets/3a722d5b-c465-4077-be94-f67c5a3353b2
 
